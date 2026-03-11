@@ -1,5 +1,5 @@
 #region license
-// Copyright 2025 Utah Departement of Transportation
+// Copyright 2026 Utah Departement of Transportation
 // for ConfigApi - %Namespace%/Program.cs
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,6 +31,10 @@ using Utah.Udot.Atspm.Infrastructure.Services;
 using Utah.Udot.ATSPM.ConfigApi.Utility;
 using Utah.Udot.NetStandardToolkit.Configuration;
 using Utah.Udot.NetStandardToolkit.Extensions;
+
+//git 1
+
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -118,7 +122,6 @@ app.UseAuthorization();
 //Cross-cutting
 app.UseResponseCompression();
 app.UseHttpLogging();
-//app.UseMiddleware<DownloadLoggingMiddleware>();
 
 //Swagger
 app.UseConfiguredSwaggerUI();
@@ -163,4 +166,6 @@ public static class Extensions
         return services;
     }
 }
+
+
 
