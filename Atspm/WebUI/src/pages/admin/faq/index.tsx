@@ -80,6 +80,8 @@ const FaqAdmin = () => {
     //do something?? potentially just delete
   }
 
+  const handleDeleteModalClose = () => undefined
+
   if (isLoading) {
     return (
       <Backdrop open>
@@ -173,7 +175,7 @@ const FaqAdmin = () => {
             objectType="Faqs"
             deleteLabel={(selectedRow: Faq) => selectedRow.header}
             open={false}
-            onClose={() => {}}
+            onClose={handleDeleteModalClose}
             onConfirm={HandleDeleteFaq}
           />
         }

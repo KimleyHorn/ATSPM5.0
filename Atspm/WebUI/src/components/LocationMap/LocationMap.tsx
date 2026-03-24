@@ -66,6 +66,7 @@ const LocationMap = ({
   } | null>(null)
 
   const locationsEnabledLength = locations.filter((l) => l.chartEnabled).length
+  const selectedLocationZoom = zoom ?? mapInfo?.zoomLevel ?? 16
 
   useEffect(() => {
     const fetchEnv = async () => {
@@ -87,17 +88,17 @@ const LocationMap = ({
       const markerLocation = locations.find((loc) => loc.id === location.id)
       if (markerLocation) {
         const { latitude, longitude } = markerLocation
-        mapRef.setView([latitude, longitude], 16)
+        mapRef.setView([latitude, longitude], selectedLocationZoom)
       }
     }
-  }, [location, mapRef, locations])
+  }, [location, mapRef, locations, selectedLocationZoom])
 
   useEffect(() => {
     if (location && mapRef) {
       const markerLocation = locations.find((loc) => loc.id === location.id)
       if (markerLocation) {
         const { latitude, longitude } = markerLocation
-        mapRef.setView([latitude, longitude], 16)
+        mapRef.setView([latitude, longitude], selectedLocationZoom)
       }
     } else if (route && mapRef && !hasFocusedRoute) {
       const bounds = L.latLngBounds(route.map((coord) => [coord[0], coord[1]]))
@@ -107,7 +108,7 @@ const LocationMap = ({
         setHasFocusedRoute(true)
       }
     }
-  }, [location, mapRef, locations, route, hasFocusedRoute])
+  }, [location, mapRef, locations, route, hasFocusedRoute, selectedLocationZoom])
 
   // Resize the map when the container resizes
   useEffect(() => {
@@ -164,7 +165,7 @@ const LocationMap = ({
       measureTypeId: null,
     })
     if (mapInfo?.initialLat && mapInfo?.initialLong) {
-      mapRef?.setView([mapInfo.initialLat, mapInfo.initialLong], 6)
+      mapRef?.setView([mapInfo.initialLat, mapInfo.initialLong], mapInfo.zoomLevel)
     }
   }, [updateFilters, mapInfo, mapRef])
 

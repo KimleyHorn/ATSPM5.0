@@ -87,6 +87,8 @@ const JurisdictionsAdmin = () => {
     //do something?? potentially just delete
   }
 
+  const handleDeleteModalClose = () => undefined
+
   const filterAssociatedObjects = (
     jurisdictionId: number,
     objects: Location[]
@@ -157,7 +159,7 @@ const JurisdictionsAdmin = () => {
             name={''}
             objectType="Jurisdiction"
             open={false}
-            onClose={() => {}}
+            onClose={handleDeleteModalClose}
             onConfirm={HandleDeleteJurisdiction}
             associatedObjects={locations}
             associatedObjectsLabel="locations"

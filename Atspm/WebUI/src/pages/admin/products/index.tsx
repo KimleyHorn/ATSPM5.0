@@ -45,6 +45,8 @@ const ProductsAdmin = () => {
     //do something?? potentially just delete
   }
 
+  const handleDeleteModalClose = () => undefined
+
   const HandleCreateProduct = async (productData: Product) => {
     const { manufacturer, model, webPage, notes } = productData
 
@@ -143,7 +145,7 @@ const ProductsAdmin = () => {
               `${selectedRow.manufacturer} - ${selectedRow.model}`
             }
             open={false}
-            onClose={() => {}}
+            onClose={handleDeleteModalClose}
             onConfirm={HandleDeleteProduct}
           />
         }

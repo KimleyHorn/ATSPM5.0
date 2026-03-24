@@ -122,6 +122,8 @@ const DevicesAdmin = () => {
     //do something?? potentially just delete
   }
 
+  const handleDeleteModalClose = () => undefined
+
   if (isLoading) {
     return (
       <Backdrop open>
@@ -205,7 +207,7 @@ const DevicesAdmin = () => {
             }
             objectType="Device Configuration"
             open={false}
-            onClose={() => {}}
+            onClose={handleDeleteModalClose}
             onConfirm={HandleDeleteDevice}
             associatedObjects={devices}
             associatedObjectsLabel="devices and locations"

@@ -80,6 +80,8 @@ const AreasAdmin = () => {
     //add code for custom modal close
   }
 
+  const handleDeleteModalClose = () => undefined
+
   const filterAssociatedObjects = (areaId: number, objects: Location[]) => {
     const associatedLocations = objects.filter((object) => {
       return object.areas?.some((id) => id === areaId)
@@ -145,7 +147,7 @@ const AreasAdmin = () => {
             name={''}
             objectType="Area"
             open={false}
-            onClose={() => {}}
+            onClose={handleDeleteModalClose}
             onConfirm={handleDeleteArea}
             associatedObjects={locations}
             associatedObjectsLabel="locations"

@@ -152,6 +152,8 @@ const RolesAdmin = () => {
     //do something?? potentially just delete
   }
 
+  const handleDeleteModalClose = () => undefined
+
   if (isLoading) {
     return (
       <Backdrop open>
@@ -234,7 +236,7 @@ const RolesAdmin = () => {
             objectType="Role"
             deleteByKey="role"
             open={false}
-            onClose={() => {}}
+            onClose={handleDeleteModalClose}
             onConfirm={HandleDeleteRole}
             deleteLabel={(selectedRow: Role) => selectedRow.role}
           />

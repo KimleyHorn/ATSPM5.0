@@ -16,13 +16,7 @@ import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import { LoadingButton } from '@mui/lab'
 import { Alert, Box } from '@mui/material'
 import { format, isValid, parseISO, startOfDay, subYears } from 'date-fns'
-import {
-  createParser,
-  parseAsArrayOf,
-  parseAsInteger,
-  parseAsString,
-  useQueryStates,
-} from 'nuqs'
+import { useRouter } from 'next/router'
 import { useEffect, useMemo, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -54,25 +48,6 @@ export type ATErrorState =
   | { type: '400' }
   | { type: 'UNKNOWN'; message: string }
 
-const ymdDateParser = createParser<Date>({
-  parse: (value) => {
-    const d = parseISO(value)
-    return isValid(d) ? d : null
-  },
-  serialize: (date) => format(date, 'yyyy-MM-dd'),
-  eq: (a, b) => a.getTime() === b.getTime(),
-})
-
-const phaseParser = createParser<number | 'All'>({
-  parse: (value) => {
-    if (value === 'All') return 'All'
-    const n = Number(value)
-    return Number.isFinite(n) ? n : null
-  },
-  serialize: (value) => String(value),
-  eq: (a, b) => a === b,
-})
-
 async function resolveLocationsByIdentifier(
   identifiers: string[]
 ): Promise<Location[]> {
@@ -102,19 +77,10 @@ async function resolveLocationsByIdentifier(
 const ActiveTransportation = () => {
   const { mutateAsync: fetchPedestrianData, isLoading } =
     useGetPedestrianAggregationLocationData()
+  const router = useRouter()
 
   const defaultStart = useMemo(() => startOfDay(subYears(new Date(), 1)), [])
   const defaultEnd = useMemo(() => startOfDay(new Date()), [])
-  const [qs, setQs] = useQueryStates(
-    {
-      locations: parseAsArrayOf(parseAsString, ',').withDefault([]),
-      timeUnit: parseAsInteger.withDefault(0),
-      start: ymdDateParser.withDefault(defaultStart),
-      end: ymdDateParser.withDefault(defaultEnd),
-      phase: phaseParser,
-    },
-    { history: 'replace' }
-  )
 
   const form = useForm<ActiveTransportationForm>({
     resolver: zodResolver(activeTransportationSchema),
@@ -138,23 +104,65 @@ const ActiveTransportation = () => {
   const phase = watch('phase')
 
   useEffect(() => {
-    setValue('timeUnit', qs.timeUnit)
-    setValue('startDate', qs.start)
-    setValue('endDate', qs.end)
-    setValue('phase', qs.phase ?? null)
+    if (!router.isReady) {
+      return
+    }
 
-    if (qs.locations.length > 0) {
+    const readQueryValue = (value: string | string[] | undefined) =>
+      Array.isArray(value) ? value[0] : value
+
+    const locationParam = readQueryValue(router.query.locations)
+    const timeUnitParam = readQueryValue(router.query.timeUnit)
+    const startParam = readQueryValue(router.query.start)
+    const endParam = readQueryValue(router.query.end)
+    const phaseParam = readQueryValue(router.query.phase)
+
+    const parsedTimeUnit =
+      timeUnitParam !== undefined && Number.isFinite(Number(timeUnitParam))
+        ? Number(timeUnitParam)
+        : 0
+
+    const parsedStart =
+      startParam !== undefined && isValid(parseISO(startParam))
+        ? parseISO(startParam)
+        : defaultStart
+
+    const parsedEnd =
+      endParam !== undefined && isValid(parseISO(endParam))
+        ? parseISO(endParam)
+        : defaultEnd
+
+    const parsedPhase =
+      phaseParam === undefined || phaseParam === ''
+        ? null
+        : phaseParam === 'All'
+          ? 'All'
+          : Number.isFinite(Number(phaseParam))
+            ? Number(phaseParam)
+            : null
+
+    const parsedLocations =
+      locationParam?.split(',').filter((s) => s.trim().length > 0) ?? []
+
+    setValue('timeUnit', parsedTimeUnit)
+    setValue('startDate', parsedStart)
+    setValue('endDate', parsedEnd)
+    setValue('phase', parsedPhase)
+
+    if (parsedLocations.length > 0) {
       void (async () => {
-        const hydrated = await resolveLocationsByIdentifier(qs.locations)
+        const hydrated = await resolveLocationsByIdentifier(parsedLocations)
         const ordered = hydrated.sort(
           (a, b) =>
-            qs.locations.indexOf(a.locationIdentifier) -
-            qs.locations.indexOf(b.locationIdentifier)
+            parsedLocations.indexOf(a.locationIdentifier) -
+            parsedLocations.indexOf(b.locationIdentifier)
         )
         if (ordered.length > 0) setValue('locations', ordered)
       })()
+    } else {
+      setValue('locations', [])
     }
-  }, [qs.locations, qs.timeUnit, qs.start, qs.end, qs.phase])
+  }, [defaultEnd, defaultStart, router.isReady, router.query, setValue])
 
   useEffect(() => {
     setData(null)
@@ -237,13 +245,22 @@ const ActiveTransportation = () => {
     }
     setErrorState({ type: 'NONE' })
 
-    await setQs({
-      locations: formData.locations.map((l) => l.locationIdentifier),
-      timeUnit: formData.timeUnit,
-      start: formData.startDate,
-      end: formData.endDate,
-      phase: formData.phase ?? null,
-    })
+    await router.replace(
+      {
+        pathname: router.pathname,
+        query: {
+          locations: formData.locations
+            .map((l) => l.locationIdentifier)
+            .join(','),
+          timeUnit: String(formData.timeUnit),
+          start: format(formData.startDate, 'yyyy-MM-dd'),
+          end: format(formData.endDate, 'yyyy-MM-dd'),
+          ...(formData.phase !== null ? { phase: String(formData.phase) } : {}),
+        },
+      },
+      undefined,
+      { shallow: true }
+    )
 
     const charts = await fetchPedestrianData({
       data: {

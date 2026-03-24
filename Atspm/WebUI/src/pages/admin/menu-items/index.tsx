@@ -130,6 +130,8 @@ const MenuItemsAdmin = () => {
     //do something?? potentially just delete
   }
 
+  const handleDeleteModalClose = () => undefined
+
   const filteredItems = menuItems.map((item) => ({
     ...item,
     parentIdName: item.parent?.name || 'N/A',
@@ -172,7 +174,7 @@ const MenuItemsAdmin = () => {
             name={''}
             objectType="Menu Item"
             open={false}
-            onClose={() => {}}
+            onClose={handleDeleteModalClose}
             onConfirm={HandleDeleteMenuItem}
           />
         }

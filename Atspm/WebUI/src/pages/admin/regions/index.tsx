@@ -74,6 +74,8 @@ const RegionsAdmin = () => {
     //do something?? potentially just delete
   }
 
+  const handleDeleteModalClose = () => undefined
+
   const filterAssociatedObjects = (
     regionId: number,
     objects: Location[]
@@ -146,7 +148,7 @@ const RegionsAdmin = () => {
               selectedRow.description
             }
             open={false}
-            onClose={() => {}}
+            onClose={handleDeleteModalClose}
             onConfirm={HandleDeleteRegion}
             associatedObjects={locations}
             associatedObjectsLabel="locations"
