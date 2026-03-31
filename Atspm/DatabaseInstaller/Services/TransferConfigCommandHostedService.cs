@@ -286,94 +286,213 @@ public class TransferConfigCommandHostedService : IHostedService
 
     private void ImportJurisdictions(Dictionary<string, string> queries, Dictionary<string, Dictionary<string, string>> columnMappings)
     {
-        if (_jurisdictionRepository.GetList().Any())
+        using var scope = _serviceProvider.CreateScope();
+        var configContext = scope.ServiceProvider.GetRequiredService<ConfigContext>();
+        if (configContext.Jurisdictions.Any())
         {
             _logger.LogInformation("Jurisdictions already exist");
             return;
         }
         _logger.LogInformation($"Importing Jurisdictions...");
         var jurisdictions = ImportData<Jurisdiction>(queries["Jurisdictions"], columnMappings["Jurisdictions"]);
-        _jurisdictionRepository.AddRange(jurisdictions);
-        _logger.LogInformation($"Jurisdictions Imported");
+        using (var transaction = configContext.Database.BeginTransaction())
+        {
+            try
+            {
+                configContext.Database.ExecuteSqlRaw("SET IDENTITY_INSERT dbo.Jurisdictions ON");
+                configContext.Jurisdictions.AddRange(jurisdictions);
+                configContext.SaveChanges();
+                transaction.Commit();
+                _logger.LogInformation($"Jurisdictions Imported");
+            }
+            catch (Exception ex)
+            {
+                transaction.Rollback();
+                _logger.LogError(ex, "Error importing jurisdictions");
+                throw;
+            }
+        }
     }
 
     private void ImportAreas(Dictionary<string, string> queries, Dictionary<string, Dictionary<string, string>> columnMappings)
     {
-        if (_areaRepository.GetList().Any())
+        using var scope = _serviceProvider.CreateScope();
+        var configContext = scope.ServiceProvider.GetRequiredService<ConfigContext>();
+        if (configContext.Areas.Any())
         {
             _logger.LogInformation("Areas already exist");
             return;
         }
         _logger.LogInformation($"Importing Areas...");
         var areas = ImportData<Area>(queries["Areas"], columnMappings["Areas"]);
-        _areaRepository.AddRange(areas);
-        _logger.LogInformation($"Areas Imported");
+        using (var transaction = configContext.Database.BeginTransaction())
+        {
+            try
+            {
+                configContext.Database.ExecuteSqlRaw("SET IDENTITY_INSERT dbo.Areas ON");
+                configContext.Areas.AddRange(areas);
+                configContext.SaveChanges();
+                transaction.Commit();
+                _logger.LogInformation($"Areas Imported");
+            }
+            catch (Exception ex)
+            {
+                transaction.Rollback();
+                _logger.LogError(ex, "Error importing areas");
+                throw;
+            }
+        }
     }
 
     private void ImportRegions(Dictionary<string, string> queries, Dictionary<string, Dictionary<string, string>> columnMappings)
     {
-        if (_regionsRepository.GetList().Any())
+        using var scope = _serviceProvider.CreateScope();
+        var configContext = scope.ServiceProvider.GetRequiredService<ConfigContext>();
+        if (configContext.Regions.Any())
         {
             _logger.LogInformation("Regions already exist");
             return;
         }
         _logger.LogInformation($"Importing Regions...");
         var regions = ImportData<Region>(queries["Regions"], columnMappings["Regions"]);
-        _regionsRepository.AddRange(regions);
-        _logger.LogInformation($"Regions Imported");
+        using (var transaction = configContext.Database.BeginTransaction())
+        {
+            try
+            {
+                configContext.Database.ExecuteSqlRaw("SET IDENTITY_INSERT dbo.Regions ON");
+                configContext.Regions.AddRange(regions);
+                configContext.SaveChanges();
+                transaction.Commit();
+                _logger.LogInformation($"Regions Imported");
+            }
+            catch (Exception ex)
+            {
+                transaction.Rollback();
+                _logger.LogError(ex, "Error importing regions");
+                throw;
+            }
+        }
     }
 
     private void ImportRoutes(Dictionary<string, string> queries, Dictionary<string, Dictionary<string, string>> columnMappings)
     {
-        if (_routeRepository.GetList().Any())
+        using var scope = _serviceProvider.CreateScope();
+        var configContext = scope.ServiceProvider.GetRequiredService<ConfigContext>();
+        if (configContext.Routes.Any())
         {
             _logger.LogInformation("Routes already exist");
             return;
         }
         _logger.LogInformation($"Importing Routes");
         var routes = ImportData<Route>(queries["Routes"], columnMappings["Routes"]);
-        _routeRepository.AddRange(routes);
-        _logger.LogInformation($"Routes Imported");
+        using (var transaction = configContext.Database.BeginTransaction())
+        {
+            try
+            {
+                configContext.Database.ExecuteSqlRaw("SET IDENTITY_INSERT dbo.Routes ON");
+                configContext.Routes.AddRange(routes);
+                configContext.SaveChanges();
+                transaction.Commit();
+                _logger.LogInformation($"Routes Imported");
+            }
+            catch (Exception ex)
+            {
+                transaction.Rollback();
+                _logger.LogError(ex, "Error importing routes");
+                throw;
+            }
+        }
     }
 
     private void ImportRouteLocations(Dictionary<string, string> queries, Dictionary<string, Dictionary<string, string>> columnMappings)
     {
-        if (_routeLocationsRepository.GetList().Any())
+        using var scope = _serviceProvider.CreateScope();
+        var configContext = scope.ServiceProvider.GetRequiredService<ConfigContext>();
+        if (configContext.RouteLocations.Any())
         {
             _logger.LogInformation("Route Locations already exist");
             return;
         }
         _logger.LogInformation($"Importing Route Locations");
         var routeLocations = ImportData<RouteLocation>(queries["RouteLocations"], columnMappings["RouteLocations"]);
-        _routeLocationsRepository.AddRange(routeLocations);
-        _logger.LogInformation($"Route Locations Imported");
+        using (var transaction = configContext.Database.BeginTransaction())
+        {
+            try
+            {
+                configContext.Database.ExecuteSqlRaw("SET IDENTITY_INSERT dbo.RouteLocations ON");
+                configContext.RouteLocations.AddRange(routeLocations);
+                configContext.SaveChanges();
+                transaction.Commit();
+                _logger.LogInformation($"Route Locations Imported");
+            }
+            catch (Exception ex)
+            {
+                transaction.Rollback();
+                _logger.LogError(ex, "Error importing route locations");
+                throw;
+            }
+        }
     }
 
 
     private void ImportDeviceConfigurations(Dictionary<string, string> queries, Dictionary<string, Dictionary<string, string>> columnMappings)
     {
-        if (_deviceConfigurationRepository.GetList().Any())
+        using var scope = _serviceProvider.CreateScope();
+        var configContext = scope.ServiceProvider.GetRequiredService<ConfigContext>();
+        if (configContext.DeviceConfigurations.Any())
         {
             _logger.LogInformation("Device Configurations already exist");
             return;
         }
         _logger.LogInformation("Adding Device Configurations");
         var deviceConfigurations = ImportData<DeviceConfiguration>(queries["DeviceConfigurations"], columnMappings["DeviceConfigurations"]);
-        _deviceConfigurationRepository.AddRange(deviceConfigurations);
-        _logger.LogInformation("Device Configurations Added");
+        using (var transaction = configContext.Database.BeginTransaction())
+        {
+            try
+            {
+                configContext.Database.ExecuteSqlRaw("SET IDENTITY_INSERT dbo.DeviceConfigurations ON");
+                configContext.DeviceConfigurations.AddRange(deviceConfigurations);
+                configContext.SaveChanges();
+                transaction.Commit();
+                _logger.LogInformation("Device Configurations Added");
+            }
+            catch (Exception ex)
+            {
+                transaction.Rollback();
+                _logger.LogError(ex, "Error importing device configurations");
+                throw;
+            }
+        }
     }
 
     private void ImportProducts(Dictionary<string, string> queries, Dictionary<string, Dictionary<string, string>> columnMappings)
     {
-        if (_productRepository.GetList().Any())
+        using var scope = _serviceProvider.CreateScope();
+        var configContext = scope.ServiceProvider.GetRequiredService<ConfigContext>();
+        if (configContext.Products.Any())
         {
             _logger.LogInformation("Products already exist");
             return;
         }
         _logger.LogInformation("Adding Products");
         var products = ImportData<Product>(queries["Products"], columnMappings["Products"]);
-        _productRepository.AddRange(products);
-        _logger.LogInformation("Products Added");
+        using (var transaction = configContext.Database.BeginTransaction())
+        {
+            try
+            {
+                configContext.Database.ExecuteSqlRaw("SET IDENTITY_INSERT dbo.Products ON");
+                configContext.Products.AddRange(products);
+                configContext.SaveChanges();
+                transaction.Commit();
+                _logger.LogInformation("Products Added");
+            }
+            catch (Exception ex)
+            {
+                transaction.Rollback();
+                _logger.LogError(ex, "Error importing products");
+                throw;
+            }
+        }
     }
 
     private void ImportApproaches(Dictionary<string, string> queries, Dictionary<string, Dictionary<string, string>> columnMappings)
