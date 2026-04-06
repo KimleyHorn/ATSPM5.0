@@ -45,6 +45,8 @@ namespace Utah.Udot.Atspm.EventLogUtility.Commands
             AddArgument(PingDeviceArg);
 
             AddGlobalOption(PathCommandOption);
+            AddGlobalOption(CsvPathCommandOption);
+            AddGlobalOption(DeleteCsvSourceOption);
             AddGlobalOption(BatchSizeOption);
             AddGlobalOption(PrallelProcessesOption);
 
@@ -68,6 +70,10 @@ namespace Utah.Udot.Atspm.EventLogUtility.Commands
         public Argument<bool?> PingDeviceArg { get; set; } = new Argument<bool?>("ping", "Ping to verify device is online before downloading");
 
         public PathCommandOption PathCommandOption { get; set; } = new();
+
+        public CsvPathCommandOption CsvPathCommandOption { get; set; } = new();
+
+        public DeleteCsvSourceOption DeleteCsvSourceOption { get; set; } = new();
 
         public BatchSizeOption BatchSizeOption { get; set; } = new();
 
@@ -104,6 +110,8 @@ namespace Utah.Udot.Atspm.EventLogUtility.Commands
             deviceEventLoggingConfiguration.BindMemberFromValue(b => b.Path, PathCommandOption);
             deviceEventLoggingConfiguration.BindMemberFromValue(b => b.BatchSize, BatchSizeOption);
             deviceEventLoggingConfiguration.BindMemberFromValue(b => b.ParallelProcesses, PrallelProcessesOption);
+            deviceEventLoggingConfiguration.BindMemberFromValue(b => b.CsvPath, CsvPathCommandOption);
+            deviceEventLoggingConfiguration.BindMemberFromValue(b => b.DeleteCsvSource, DeleteCsvSourceOption);
 
             var deviceEventLoggingQueryOptions = new ModelBinder<DeviceEventLoggingQueryOptions>();
 
@@ -179,6 +187,25 @@ namespace Utah.Udot.Atspm.EventLogUtility.Commands
         public DeviceStatusCommandOption() : base("--device-status", "Device status to include")
         {
             AddAlias("-ds");
+        }
+    }
+
+    public class CsvPathCommandOption : Option<string>
+    {
+        public CsvPathCommandOption() : base("--csv-path", "Path to directory containing Frisco CSV event log files")
+        {
+            AddAlias("-cp");
+            SetDefaultValue(System.IO.Path.GetTempPath());
+        }
+    }
+
+    public class DeleteCsvSourceOption : Option<bool>
+    {
+        public DeleteCsvSourceOption() : base("--delete-csv-source", "Delete each CSV file after it has been successfully imported")
+        {
+            AddAlias("-dcs");
+            Arity = ArgumentArity.ZeroOrOne;
+            SetDefaultValue(true);
         }
     }
 }

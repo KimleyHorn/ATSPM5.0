@@ -30,6 +30,19 @@ namespace Utah.Udot.Atspm.Infrastructure.Configuration
         public string Path { get; set; } = System.IO.Path.GetTempPath();
 
         /// <summary>
+        /// Path to local directory where Frisco CSV event log files are deposited.
+        /// Only used when devices with <see cref="Utah.Udot.Atspm.Data.Enums.TransportProtocols.Csv"/>
+        /// are included in the logging run.
+        /// </summary>
+        public string CsvPath { get; set; } = System.IO.Path.GetTempPath();
+
+        /// <summary>
+        /// When <see langword="true"/>, each CSV source file is deleted after it has been
+        /// successfully imported. Set to <see langword="false"/> to keep files on disk.
+        /// </summary>
+        public bool DeleteCsvSource { get; set; } = true;
+
+        /// <summary>
         /// Batch size of <see cref="EventLogModelBase"/> objects when saving to repository
         /// </summary>
         public int BatchSize { get; set; }

@@ -45,6 +45,11 @@ namespace Utah.Udot.Atspm.Data.Enums
         /// <summary>
         /// Supports HTTP Protocol
         /// </summary>
-        Http
+        Http,
+
+        /// <summary>
+        /// Reads CSV files from a local directory
+        /// </summary>
+        Csv
     }
 }
