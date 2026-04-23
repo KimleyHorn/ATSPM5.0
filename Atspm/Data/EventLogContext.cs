@@ -85,8 +85,7 @@ namespace Utah.Udot.Atspm.Data
                     .IsRequired()
                     .HasMaxLength(10);
 
-                builder.Property(e => e.ArchiveDate)
-                    .HasColumnType("Date");
+                builder.Ignore(e => e.ArchiveDate);
 
                 builder.Property(p => p.DataType)
                 .HasMaxLength(32)
