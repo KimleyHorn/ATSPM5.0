@@ -43,9 +43,14 @@ export function setSecureCookie(
   value: string,
   options: CookieOptions = {}
 ): void {
+  const shouldUseSecureCookies =
+    typeof window !== 'undefined' && window.location.protocol === 'https:'
+
   const defaultOptions: CookieOptions = {
-    secure: true,
+    secure: shouldUseSecureCookies,
     expires: 1, // Default expiration: 1 day
+    sameSite: 'Lax',
+    path: '/',
   }
 
   const finalOptions = { ...defaultOptions, ...options }

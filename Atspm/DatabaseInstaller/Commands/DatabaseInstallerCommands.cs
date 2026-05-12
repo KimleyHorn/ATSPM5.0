@@ -32,16 +32,21 @@ namespace DatabaseInstaller.Commands
             AddCommand(TranslateEventLogsCommand);
             AddCommand(TransferDailyToHourlyEventLogsCommand);
             AddCommand(SetupTestCommand);
+            AddCommand(ArchiveParquetCommand);
+            AddCommand(ImportLocationsCommand);
         }
 
         public UpdateCommand UpdateCommand { get; set; } = new UpdateCommand();
         public TransferConfigCommand CopyConfigurationCommand { get; set; } = new TransferConfigCommand();
+        public ImportLocationsCommand ImportLocationsCommand { get; set; } = new ImportLocationsCommand();
         public MoveEventLogsSqlServerToPostgresCommand MoveEventLogsSqlServerToPostgresCommand { get; set; } = new MoveEventLogsSqlServerToPostgresCommand();
         public TransferEventLogsCommand TransferEventLogsCommand { get; set; } = new TransferEventLogsCommand();
         public TransferSpeedEventsCommand TransferSpeedEventsCommand { get; set; } = new TransferSpeedEventsCommand();
         public TranslateEventLogsCommand TranslateEventLogsCommand { get; set; } = new TranslateEventLogsCommand();
         public TransferDailyToHourlyEventLogsCommand TransferDailyToHourlyEventLogsCommand { get; set; } = new TransferDailyToHourlyEventLogsCommand();
         public SetupTestCommand SetupTestCommand { get; set; } = new SetupTestCommand();
+        public ArchiveParquetCommand ArchiveParquetCommand { get; set; } = new ArchiveParquetCommand(); 
+
 
     }
 }

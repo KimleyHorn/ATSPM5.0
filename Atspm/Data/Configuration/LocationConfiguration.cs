@@ -17,6 +17,7 @@
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
+using Utah.Udot.Atspm.Data.Enums;
 
 namespace Utah.Udot.Atspm.Data.Configuration
 {
@@ -33,8 +34,6 @@ namespace Utah.Udot.Atspm.Data.Configuration
             builder.HasIndex(e => e.JurisdictionId);
 
             builder.HasIndex(e => e.RegionId);
-
-            builder.Property(e => e.JurisdictionId).HasDefaultValueSql("((0))");
 
             builder.Property(e => e.Latitude)
                 .IsRequired();
@@ -59,7 +58,9 @@ namespace Utah.Udot.Atspm.Data.Configuration
                 .IsRequired()
                 .HasMaxLength(10);
 
-            builder.Property(e => e.VersionAction).HasDefaultValueSql("((10))");
+            builder.Property(e => e.VersionAction)
+                .HasDefaultValueSql("((10))")
+                .HasSentinel(LocationVersionActions.Unknown);
         }
     }
 }

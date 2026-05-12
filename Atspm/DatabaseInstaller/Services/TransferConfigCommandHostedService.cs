@@ -288,7 +288,7 @@ public class TransferConfigCommandHostedService : IHostedService
     {
         using var scope = _serviceProvider.CreateScope();
         var configContext = scope.ServiceProvider.GetRequiredService<ConfigContext>();
-        if (configContext.Jurisdictions.Any())
+        if (_jurisdictionRepository.GetList().Any())
         {
             _logger.LogInformation("Jurisdictions already exist");
             return;
@@ -302,13 +302,14 @@ public class TransferConfigCommandHostedService : IHostedService
                 configContext.Database.ExecuteSqlRaw("SET IDENTITY_INSERT dbo.Jurisdictions ON");
                 configContext.Jurisdictions.AddRange(jurisdictions);
                 configContext.SaveChanges();
+                configContext.Database.ExecuteSqlRaw("SET IDENTITY_INSERT dbo.Jurisdictions OFF");
                 transaction.Commit();
-                _logger.LogInformation($"Jurisdictions Imported");
+                _logger.LogInformation("Jurisdictions Added");
             }
             catch (Exception ex)
             {
                 transaction.Rollback();
-                _logger.LogError(ex, "Error importing jurisdictions");
+                _logger.LogError(ex, "Error importing Jurisdictions");
                 throw;
             }
         }
@@ -346,29 +347,28 @@ public class TransferConfigCommandHostedService : IHostedService
 
     private void ImportRegions(Dictionary<string, string> queries, Dictionary<string, Dictionary<string, string>> columnMappings)
     {
-        using var scope = _serviceProvider.CreateScope();
-        var configContext = scope.ServiceProvider.GetRequiredService<ConfigContext>();
-        if (configContext.Regions.Any())
+        if (_regionsRepository.GetList().Any())
         {
             _logger.LogInformation("Regions already exist");
             return;
         }
         _logger.LogInformation($"Importing Regions...");
         var regions = ImportData<Region>(queries["Regions"], columnMappings["Regions"]);
-        using (var transaction = configContext.Database.BeginTransaction())
+        using (var transactions = configContext.Database.BeginTransaction())
         {
             try
             {
                 configContext.Database.ExecuteSqlRaw("SET IDENTITY_INSERT dbo.Regions ON");
                 configContext.Regions.AddRange(regions);
                 configContext.SaveChanges();
-                transaction.Commit();
-                _logger.LogInformation($"Regions Imported");
+                configContext.Database.ExecuteSqlRaw("SET IDENTITY_INSERT dbo.Regions OFF");
+                transactions.Commit();
+                _logger.LogInformation("Regions Added");
             }
-            catch (Exception ex)
+            catch (Exception ex) 
             {
-                transaction.Rollback();
-                _logger.LogError(ex, "Error importing regions");
+                transactions.Rollback();
+                _logger.LogError(ex, "Error importing products");
                 throw;
             }
         }
@@ -437,58 +437,55 @@ public class TransferConfigCommandHostedService : IHostedService
 
     private void ImportDeviceConfigurations(Dictionary<string, string> queries, Dictionary<string, Dictionary<string, string>> columnMappings)
     {
-        using var scope = _serviceProvider.CreateScope();
-        var configContext = scope.ServiceProvider.GetRequiredService<ConfigContext>();
-        if (configContext.DeviceConfigurations.Any())
+        if (_deviceConfigurationRepository.GetList().Any())
         {
             _logger.LogInformation("Device Configurations already exist");
             return;
         }
         _logger.LogInformation("Adding Device Configurations");
         var deviceConfigurations = ImportData<DeviceConfiguration>(queries["DeviceConfigurations"], columnMappings["DeviceConfigurations"]);
-        using (var transaction = configContext.Database.BeginTransaction())
+        using (var transactions = configContext.Database.BeginTransaction())
         {
             try
             {
                 configContext.Database.ExecuteSqlRaw("SET IDENTITY_INSERT dbo.DeviceConfigurations ON");
                 configContext.DeviceConfigurations.AddRange(deviceConfigurations);
                 configContext.SaveChanges();
-                transaction.Commit();
-                _logger.LogInformation("Device Configurations Added");
+                configContext.Database.ExecuteSqlRaw("SET IDENTITY_INSERT dbo.DeviceConfigurations OFF");
+                transactions.Commit();
+                _logger.LogInformation("Products Added");
             }
             catch (Exception ex)
             {
-                transaction.Rollback();
-                _logger.LogError(ex, "Error importing device configurations");
-                throw;
+                transactions.Rollback();
+                _logger.LogError(ex, "Error importing Device Configurations");
             }
         }
     }
 
     private void ImportProducts(Dictionary<string, string> queries, Dictionary<string, Dictionary<string, string>> columnMappings)
     {
-        using var scope = _serviceProvider.CreateScope();
-        var configContext = scope.ServiceProvider.GetRequiredService<ConfigContext>();
-        if (configContext.Products.Any())
+        if (_productRepository.GetList().Any())
         {
             _logger.LogInformation("Products already exist");
             return;
         }
         _logger.LogInformation("Adding Products");
         var products = ImportData<Product>(queries["Products"], columnMappings["Products"]);
-        using (var transaction = configContext.Database.BeginTransaction())
+        using (var transactions = configContext.Database.BeginTransaction())
         {
             try
             {
                 configContext.Database.ExecuteSqlRaw("SET IDENTITY_INSERT dbo.Products ON");
                 configContext.Products.AddRange(products);
                 configContext.SaveChanges();
-                transaction.Commit();
+                configContext.Database.ExecuteSqlRaw("SET IDENTITY_INSERT dbo.Products OFF");
+                transactions.Commit();
                 _logger.LogInformation("Products Added");
             }
             catch (Exception ex)
             {
-                transaction.Rollback();
+                transactions.Rollback();
                 _logger.LogError(ex, "Error importing products");
                 throw;
             }

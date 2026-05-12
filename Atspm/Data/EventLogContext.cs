@@ -85,6 +85,8 @@ namespace Utah.Udot.Atspm.Data
                     .IsRequired()
                     .HasMaxLength(10);
 
+                builder.Ignore(e => e.ArchiveDate);
+
                 builder.Property(p => p.DataType)
                 .HasMaxLength(32)
                 .HasConversion(new CompressionTypeConverter(typeof(EventLogModelBase).Namespace.ToString(), typeof(EventLogModelBase).Assembly.ToString()));

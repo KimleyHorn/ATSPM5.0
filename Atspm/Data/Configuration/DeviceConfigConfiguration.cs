@@ -63,7 +63,8 @@ namespace Utah.Udot.Atspm.Data.Configuration
                 .HasMaxLength(512)
                 .HasConversion(
                 v => JsonConvert.SerializeObject(v),
-                v => JsonConvert.DeserializeObject<string[]>(v));
+                v => JsonConvert.DeserializeObject<string[]>(v))
+                .Metadata.SetValueComparer(new StringArrayValueComparer());
 
             builder.Property(e => e.ConnectionTimeout)
                 .HasDefaultValueSql("((2000))");
@@ -77,7 +78,8 @@ namespace Utah.Udot.Atspm.Data.Configuration
                 .HasMaxLength(512)
                 .HasConversion(
                 v => JsonConvert.SerializeObject(v),
-                v => JsonConvert.DeserializeObject<string[]>(v));
+                v => JsonConvert.DeserializeObject<string[]>(v))
+                .Metadata.SetValueComparer(new StringArrayValueComparer());
 
             builder.Property(e => e.UserName)
                 .IsRequired(false)
