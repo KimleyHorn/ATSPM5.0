@@ -77,14 +77,29 @@ namespace DatabaseInstaller.Commands
 
     public class UpdateCommandConfiguration
     {
-        public string ConfigConnection { get; set; }
-        public string AggregationConnection { get; set; }
-        public string EventLogConnection { get; set; }
-        public string IdentityConnection { get; set; }
-        public string Provider { get; set; }
-        public string AdminEmail { get; set; }
-        public string AdminPassword { get; set; }
-        public string AdminRole { get; set; }
+        public string ConfigConnection { get; set; } = string.Empty;
+        public string ConfigConnectionString { get; set; } = string.Empty;
+        public string AggregationConnection { get; set; } = string.Empty;
+        public string AggregationConnectionString { get; set; } = string.Empty;
+        public string EventLogConnection { get; set; } = string.Empty;
+        public string EventLogConnectionString { get; set; } = string.Empty;
+        public string IdentityConnection { get; set; } = string.Empty;
+        public string IdentityConnectionString { get; set; } = string.Empty;
+        public string Provider { get; set; } = string.Empty;
+        public string AdminEmail { get; set; } = string.Empty;
+        public string AdminPassword { get; set; } = string.Empty;
+        public string AdminRole { get; set; } = string.Empty;
         public bool SeedAdmin { get; set; }
+
+        public string GetConfigConnection() => FirstNonEmpty(ConfigConnection, ConfigConnectionString);
+
+        public string GetAggregationConnection() => FirstNonEmpty(AggregationConnection, AggregationConnectionString);
+
+        public string GetEventLogConnection() => FirstNonEmpty(EventLogConnection, EventLogConnectionString);
+
+        public string GetIdentityConnection() => FirstNonEmpty(IdentityConnection, IdentityConnectionString);
+
+        private static string FirstNonEmpty(params string[] values) =>
+            values.FirstOrDefault(value => !string.IsNullOrWhiteSpace(value)) ?? string.Empty;
     }
 }

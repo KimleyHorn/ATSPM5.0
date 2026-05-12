@@ -63,6 +63,7 @@ cmdBuilder.UseHost(hostBuilder =>
         services.Configure<TransferCommandConfiguration>(hostContext.Configuration.GetSection(nameof(TransferCommandConfiguration)));
         services.Configure<TransferConfigCommandConfiguration>(hostContext.Configuration.GetSection(nameof(TransferConfigCommandConfiguration)));
         services.Configure<ImportLocationsCommandConfiguration>(hostContext.Configuration.GetSection(nameof(ImportLocationsCommandConfiguration)));
+        services.Configure<ImportDetectionTypeDetectorCommandConfiguration>(hostContext.Configuration.GetSection(nameof(ImportDetectionTypeDetectorCommandConfiguration)));
 
     });
 },

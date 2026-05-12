@@ -34,6 +34,7 @@ namespace DatabaseInstaller.Commands
             AddCommand(SetupTestCommand);
             AddCommand(ArchiveParquetCommand);
             AddCommand(ImportLocationsCommand);
+            AddCommand(ImportDetectionTypeDetectorCommand);
         }
 
         public UpdateCommand UpdateCommand { get; set; } = new UpdateCommand();
@@ -46,6 +47,7 @@ namespace DatabaseInstaller.Commands
         public TransferDailyToHourlyEventLogsCommand TransferDailyToHourlyEventLogsCommand { get; set; } = new TransferDailyToHourlyEventLogsCommand();
         public SetupTestCommand SetupTestCommand { get; set; } = new SetupTestCommand();
         public ArchiveParquetCommand ArchiveParquetCommand { get; set; } = new ArchiveParquetCommand(); 
+        public ImportDetectionTypeDetectorCommand ImportDetectionTypeDetectorCommand { get; set; } = new ImportDetectionTypeDetectorCommand();
 
 
     }
