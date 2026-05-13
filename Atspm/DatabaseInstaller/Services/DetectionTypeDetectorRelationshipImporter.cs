@@ -84,14 +84,14 @@ public static class DetectionTypeDetectorRelationshipImporter
 
         foreach (var detector in detectors)
         {
-            if (detectionTypes.TryGetValue((int)DetectionTypes.B, out var basicDetectionType))
-            {
-                AddDetectionType(detector, basicDetectionType, ref addedRelationships, ref existingRelationships);
-            }
-
             if (!sourceDetectionTypeIdsByDetector.TryGetValue(detector.Id, out var detectionTypeIds))
             {
                 continue;
+            }
+
+            if (detectionTypes.TryGetValue((int)DetectionTypes.B, out var basicDetectionType))
+            {
+                AddDetectionType(detector, basicDetectionType, ref addedRelationships, ref existingRelationships);
             }
 
             foreach (var detectionTypeId in detectionTypeIds)

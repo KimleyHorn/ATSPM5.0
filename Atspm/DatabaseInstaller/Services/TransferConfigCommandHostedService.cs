@@ -542,7 +542,7 @@ public class TransferConfigCommandHostedService : IHostedService
             configContext,
             detectionTypeDetectors,
             _logger,
-            clearExisting: false,
+            clearExisting: true,
             cancellationToken);
     }
 
