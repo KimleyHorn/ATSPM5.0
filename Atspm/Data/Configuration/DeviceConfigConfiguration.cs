@@ -43,6 +43,7 @@ namespace Utah.Udot.Atspm.Data.Configuration
                 .HasMaxLength(512);
 
             builder.Property(e => e.Protocol)
+                .HasConversion<string>()
                 .HasMaxLength(Enum.GetNames(typeof(TransportProtocols)).Max().Length)
                 .HasDefaultValue(TransportProtocols.Unknown);
 

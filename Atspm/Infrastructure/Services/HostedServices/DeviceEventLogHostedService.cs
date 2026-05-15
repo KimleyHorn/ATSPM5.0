@@ -46,7 +46,11 @@ namespace Utah.Udot.Atspm.Infrastructure.Services.HostedServices
             var repo = scope.ServiceProvider.GetService<IDeviceRepository>();
 
             var workflow = new DeviceEventLogWorkflow(scope.ServiceProvider.GetService<IServiceScopeFactory>(), _options.Value.BatchSize, _options.Value.ParallelProcesses, cancellationToken);
-            await workflow.Initialize();
+            // WorkflowBase constructor calls BeginInit() which runs Initialize() in the background.
+            // Calling Initialize() explicitly again would race with the background task, causing
+            // LinkSteps() to execute twice and BroadcastBlock to deliver each item twice.
+            // Instead, wait for the background initialization to complete.
+            await WaitForInitializedAsync(workflow, cancellationToken);
 
             if (workflow.Input == null)
                 throw new InvalidOperationException("DeviceEventLogWorkflow.Input is null after construction — WorkflowBase.Initialize() did not run.");
@@ -75,7 +79,7 @@ namespace Utah.Udot.Atspm.Infrastructure.Services.HostedServices
             if (anyCsvDevices)
             {
                 var csvWorkflow = new DecodeEventLogWorkflow(scope.ServiceProvider.GetService<IServiceScopeFactory>(), _options.Value.BatchSize > 0 ? _options.Value.BatchSize : 50000, cancellationToken);
-                await csvWorkflow.Initialize();
+                await WaitForInitializedAsync(csvWorkflow, cancellationToken);
                 await ProcessCsvDevices(scope, repo, csvWorkflow, cancellationToken);
             }
         }
@@ -135,6 +139,31 @@ namespace Utah.Udot.Atspm.Infrastructure.Services.HostedServices
                     catch { /* non-fatal: file may already be gone or locked */ }
                 }
             }
+        }
+
+        /// <summary>
+        /// Waits for a workflow's background initialization (started by the WorkflowBase constructor
+        /// via BeginInit) to complete. Calling <c>Initialize()</c> explicitly a second time races
+        /// with the background task and causes <c>LinkSteps()</c> to execute twice, resulting in the
+        /// BroadcastBlock delivering each item to downstream steps twice.
+        /// </summary>
+        private static async Task WaitForInitializedAsync(Utah.Udot.NetStandardToolkit.BaseClasses.ServiceObjectBase workflow, CancellationToken ct)
+        {
+            if (workflow.IsInitialized) return;
+
+            var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            EventHandler onInit = null;
+            onInit = (_, _) => { workflow.Initialized -= onInit; tcs.TrySetResult(); };
+            workflow.Initialized += onInit;
+
+            // Re-check after subscribing to avoid a missed-event race
+            if (workflow.IsInitialized)
+            {
+                workflow.Initialized -= onInit;
+                return;
+            }
+
+            await tcs.Task.WaitAsync(TimeSpan.FromSeconds(30), ct);
         }
 
         /// <summary>

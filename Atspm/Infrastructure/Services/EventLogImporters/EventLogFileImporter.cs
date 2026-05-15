@@ -74,7 +74,6 @@ namespace Utah.Udot.Atspm.Infrastructure.Services.EventLogImporters
 
             var device = parameter.Item1;
             var file = parameter.Item2;
-            var decoders = parameter.Item1.DeviceConfiguration.Decoders.ToList();
 
             if (device == null)
                 throw new ArgumentNullException(nameof(device), $"can not be null");
@@ -85,8 +84,10 @@ namespace Utah.Udot.Atspm.Infrastructure.Services.EventLogImporters
             if (!file.Exists)
                 throw new FileNotFoundException($"File not found {file.FullName}", file.FullName);
 
-            if (decoders == null)
-                throw new ArgumentNullException(nameof(decoders), $"can not be null");
+            if (device.DeviceConfiguration?.Decoders == null)
+                throw new ArgumentNullException("decoders", $"DeviceConfiguration.Decoders can not be null for device {device.DeviceIdentifier}");
+
+            var decoders = device.DeviceConfiguration.Decoders.ToList();
 
             if (CanExecute(parameter))
             {

@@ -49,8 +49,8 @@ namespace Utah.Udot.Atspm.Infrastructure.Services.EventLogDecoders
             if (device == null)
                 throw new ArgumentNullException(nameof(device), "Device can not be null");
 
-            if (stream?.Length == 0)
-                throw new InvalidDataException("Stream is empty");
+            if (stream == null || stream.Length == 0)
+                throw new InvalidDataException("Stream is null or empty");
 
             var locationIdentifier = device.Location.LocationIdentifier;
 

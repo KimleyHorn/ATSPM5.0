@@ -67,7 +67,20 @@ namespace Utah.Udot.Atspm.Infrastructure.Extensions
     {
         internal static DbContextOptionsBuilder GetDbProviderInfo<T>(this DbContextOptionsBuilder builder, HostBuilderContext host)
         {
-            var opt = host.Configuration.GetSection($"ConnectionStrings:{typeof(T).Name}").Get<DatabaseOption>();
+            var sectionKey = $"ConnectionStrings:{typeof(T).Name}";
+            var section = host.Configuration.GetSection(sectionKey);
+            var opt = section.Get<DatabaseOption>();
+
+            if (opt == null)
+            {
+                var allKeys = host.Configuration.AsEnumerable()
+                    .Where(kv => kv.Key.StartsWith("ConnectionStrings"))
+                    .Select(kv => $"{kv.Key}={kv.Value}");
+                throw new InvalidOperationException(
+                    $"Configuration section '{sectionKey}' could not be deserialized into DatabaseOption. " +
+                    $"Section exists: {section.Exists()}. " +
+                    $"All ConnectionStrings keys: [{string.Join(", ", allKeys)}]");
+            }
 
             switch (opt.Provider)
             {
