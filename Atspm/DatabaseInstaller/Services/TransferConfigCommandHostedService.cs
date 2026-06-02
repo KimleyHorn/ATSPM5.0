@@ -1,5 +1,5 @@
 ﻿#region license
-// Copyright 2025 Utah Departement of Transportation
+// Copyright 2026 Utah Departement of Transportation
 // for DatabaseInstaller - %Namespace%/TransferConfigCommandHostedService.cs
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,7 +16,7 @@
 #endregion
 
 using DatabaseInstaller.Commands;
-using Lextm.SharpSnmpLib;
+using DatabaseInstaller.Services;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -119,7 +119,7 @@ public class TransferConfigCommandHostedService : IHostedService
             ImportJurisdictions(queries, columnMappings);
             ImportLocations(queries, columnMappings);
             ImportApproaches(queries, columnMappings);
-            ImportDetectors(queries, columnMappings);
+            await ImportDetectors(queries, columnMappings, cancellationToken);
             ImportRoutes(queries, columnMappings);
             ImportRouteLocations(queries, columnMappings);
             ImportDevices(queries, columnMappings);
@@ -171,6 +171,64 @@ public class TransferConfigCommandHostedService : IHostedService
             configContext.Database.ExecuteSqlRaw(query);
 
             Console.WriteLine($"Sequence {sequence} reset successfully.");
+        }
+    }
+
+    private void AddRangePreservingIdentity<TEntity>(
+        ConfigContext configContext,
+        string tableName,
+        IEnumerable<TEntity> entities) where TEntity : class
+    {
+        var entityList = entities.ToList();
+        if (entityList.Count == 0)
+        {
+            _logger.LogInformation("No {TableName} records to import.", tableName);
+            return;
+        }
+
+        var useIdentityInsert = configContext.Database.IsSqlServer();
+        var identityInsertEnabled = false;
+
+        using var transaction = configContext.Database.BeginTransaction();
+        try
+        {
+            if (useIdentityInsert)
+            {
+                configContext.Database.ExecuteSqlRaw($"SET IDENTITY_INSERT [dbo].[{tableName}] ON");
+                identityInsertEnabled = true;
+            }
+
+            configContext.Set<TEntity>().AddRange(entityList);
+            configContext.SaveChanges();
+
+            if (identityInsertEnabled)
+            {
+                configContext.Database.ExecuteSqlRaw($"SET IDENTITY_INSERT [dbo].[{tableName}] OFF");
+                identityInsertEnabled = false;
+            }
+
+            transaction.Commit();
+        }
+        catch
+        {
+            if (identityInsertEnabled)
+            {
+                try
+                {
+                    configContext.Database.ExecuteSqlRaw($"SET IDENTITY_INSERT [dbo].[{tableName}] OFF");
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to disable IDENTITY_INSERT for {TableName}.", tableName);
+                }
+            }
+
+            transaction.Rollback();
+            throw;
+        }
+        finally
+        {
+            configContext.ChangeTracker.Clear();
         }
     }
 
@@ -296,36 +354,22 @@ public class TransferConfigCommandHostedService : IHostedService
         }
         _logger.LogInformation($"Importing Jurisdictions...");
         var jurisdictions = ImportData<Jurisdiction>(queries["Jurisdictions"], columnMappings["Jurisdictions"]);
-        using (var transaction = configContext.Database.BeginTransaction())
-        {
-            try
-            {
-                configContext.Database.ExecuteSqlRaw("SET IDENTITY_INSERT dbo.Jurisdictions ON");
-                configContext.Jurisdictions.AddRange(jurisdictions);
-                configContext.SaveChanges();
-                configContext.Database.ExecuteSqlRaw("SET IDENTITY_INSERT dbo.Jurisdictions OFF");
-                transaction.Commit();
-                _logger.LogInformation("Jurisdictions Added");
-            }
-            catch (Exception ex)
-            {
-                transaction.Rollback();
-                _logger.LogError(ex, "Error importing Jurisdictions");
-                throw;
-            }
-        }
+        AddRangePreservingIdentity(configContext, "Jurisdictions", jurisdictions);
+        _logger.LogInformation("Jurisdictions Added");
     }
 
     private void ImportAreas(Dictionary<string, string> queries, Dictionary<string, Dictionary<string, string>> columnMappings)
     {
-        if (_areaRepository.GetList().Any())
+        using var scope = _serviceProvider.CreateScope();
+        var configContext = scope.ServiceProvider.GetRequiredService<ConfigContext>();
+        if (configContext.Areas.Any())
         {
             _logger.LogInformation("Areas already exist");
             return;
         }
         _logger.LogInformation($"Importing Areas...");
         var areas = ImportData<Area>(queries["Areas"], columnMappings["Areas"]);
-        _areaRepository.AddRange(areas);
+        AddRangePreservingIdentity(configContext, "Areas", areas);
         _logger.LogInformation($"Areas Imported");
     }
 
@@ -333,56 +377,44 @@ public class TransferConfigCommandHostedService : IHostedService
     {
         using var scope = _serviceProvider.CreateScope();
         var configContext = scope.ServiceProvider.GetRequiredService<ConfigContext>();
-        if (configContext.Regions.Any())
+        if (_regionsRepository.GetList().Any())
         {
             _logger.LogInformation("Regions already exist");
             return;
         }
         _logger.LogInformation($"Importing Regions...");
         var regions = ImportData<Region>(queries["Regions"], columnMappings["Regions"]);
-        using (var transactions = configContext.Database.BeginTransaction())
-        {
-            try
-            {
-                configContext.Database.ExecuteSqlRaw("SET IDENTITY_INSERT dbo.Regions ON");
-                configContext.Regions.AddRange(regions);
-                configContext.SaveChanges();
-                configContext.Database.ExecuteSqlRaw("SET IDENTITY_INSERT dbo.Regions OFF");
-                transactions.Commit();
-                _logger.LogInformation("Regions Added");
-            }
-            catch (Exception ex) 
-            {
-                transactions.Rollback();
-                _logger.LogError(ex, "Error importing products");
-                throw;
-            }
-        }
+        AddRangePreservingIdentity(configContext, "Regions", regions);
+        _logger.LogInformation("Regions Added");
     }
 
     private void ImportRoutes(Dictionary<string, string> queries, Dictionary<string, Dictionary<string, string>> columnMappings)
     {
-        if (_routeRepository.GetList().Any())
+        using var scope = _serviceProvider.CreateScope();
+        var configContext = scope.ServiceProvider.GetRequiredService<ConfigContext>();
+        if (configContext.Routes.Any())
         {
             _logger.LogInformation("Routes already exist");
             return;
         }
         _logger.LogInformation($"Importing Routes");
         var routes = ImportData<Route>(queries["Routes"], columnMappings["Routes"]);
-        _routeRepository.AddRange(routes);
+        AddRangePreservingIdentity(configContext, "Routes", routes);
         _logger.LogInformation($"Routes Imported");
     }
 
     private void ImportRouteLocations(Dictionary<string, string> queries, Dictionary<string, Dictionary<string, string>> columnMappings)
     {
-        if (_routeLocationsRepository.GetList().Any())
+        using var scope = _serviceProvider.CreateScope();
+        var configContext = scope.ServiceProvider.GetRequiredService<ConfigContext>();
+        if (configContext.RouteLocations.Any())
         {
             _logger.LogInformation("Route Locations already exist");
             return;
         }
         _logger.LogInformation($"Importing Route Locations");
         var routeLocations = ImportData<RouteLocation>(queries["RouteLocations"], columnMappings["RouteLocations"]);
-        _routeLocationsRepository.AddRange(routeLocations);
+        AddRangePreservingIdentity(configContext, "RouteLocations", routeLocations);
         _logger.LogInformation($"Route Locations Imported");
     }
 
@@ -391,61 +423,30 @@ public class TransferConfigCommandHostedService : IHostedService
     {
         using var scope = _serviceProvider.CreateScope();
         var configContext = scope.ServiceProvider.GetRequiredService<ConfigContext>();
-        if (configContext.DeviceConfigurations.Any())
+        if (_deviceConfigurationRepository.GetList().Any())
         {
             _logger.LogInformation("Device Configurations already exist");
             return;
         }
         _logger.LogInformation("Adding Device Configurations");
         var deviceConfigurations = ImportData<DeviceConfiguration>(queries["DeviceConfigurations"], columnMappings["DeviceConfigurations"]);
-        using (var transactions = configContext.Database.BeginTransaction())
-        {
-            try
-            {
-                configContext.Database.ExecuteSqlRaw("SET IDENTITY_INSERT dbo.DeviceConfigurations ON");
-                configContext.DeviceConfigurations.AddRange(deviceConfigurations);
-                configContext.SaveChanges();
-                configContext.Database.ExecuteSqlRaw("SET IDENTITY_INSERT dbo.DeviceConfigurations OFF");
-                transactions.Commit();
-                _logger.LogInformation("Products Added");
-            }
-            catch (Exception ex)
-            {
-                transactions.Rollback();
-                _logger.LogError(ex, "Error importing Device Configurations");
-            }
-        }
+        AddRangePreservingIdentity(configContext, "DeviceConfigurations", deviceConfigurations);
+        _logger.LogInformation("Device Configurations Added");
     }
 
     private void ImportProducts(Dictionary<string, string> queries, Dictionary<string, Dictionary<string, string>> columnMappings)
     {
         using var scope = _serviceProvider.CreateScope();
         var configContext = scope.ServiceProvider.GetRequiredService<ConfigContext>();
-        if (configContext.Products.Any())
+        if (_productRepository.GetList().Any())
         {
             _logger.LogInformation("Products already exist");
             return;
         }
         _logger.LogInformation("Adding Products");
         var products = ImportData<Product>(queries["Products"], columnMappings["Products"]);
-        using (var transactions = configContext.Database.BeginTransaction())
-        {
-            try
-            {
-                configContext.Database.ExecuteSqlRaw("SET IDENTITY_INSERT dbo.Products ON");
-                configContext.Products.AddRange(products);
-                configContext.SaveChanges();
-                configContext.Database.ExecuteSqlRaw("SET IDENTITY_INSERT dbo.Products OFF");
-                transactions.Commit();
-                _logger.LogInformation("Products Added");
-            }
-            catch (Exception ex)
-            {
-                transactions.Rollback();
-                _logger.LogError(ex, "Error importing products");
-                throw;
-            }
-        }
+        AddRangePreservingIdentity(configContext, "Products", products);
+        _logger.LogInformation("Products Added");
     }
 
     private void ImportApproaches(Dictionary<string, string> queries, Dictionary<string, Dictionary<string, string>> columnMappings)
@@ -463,55 +464,17 @@ public class TransferConfigCommandHostedService : IHostedService
         // Import all approaches at once
         var approaches = ImportData<Approach>(queries["Approaches"], columnMappings["Approaches"]);
 
-        using (var transaction = configContext.Database.BeginTransaction()) 
+        if (_config.Delete == true)
         {
-            try
-            {
-                configContext.Database.ExecuteSqlRaw("SET IDENTITY_INSERT dbo.Approaches ON");
-                if (_config.Delete == true)
-                {
-                    const int batchSize = 5000;
-                    int total = approaches.Count;
-                    int batches = (int)Math.Ceiling(total / (double)batchSize);
-
-                    for (int i = 0; i < batches; i++)
-                    {
-                        var batch = approaches.Skip(i * batchSize).Take(batchSize).ToList();
-                        configContext.Approaches.AddRange(batch);
-                        configContext.SaveChanges();
-                        _logger.LogInformation($"Batch {i + 1}/{batches} imported ({batch.Count} approaches).");
-                    }
-
-                    _logger.LogInformation($"All Approaches Imported");
-                }
-                else
-                {
-                    var approachIds = configContext.Approaches.Select(a => a.Id).ToList();
-                    //Get approaches that are not in the approachIds list
-                    var newApproaches = approaches.Where(a => !approachIds.Contains(a.Id)).ToList();
-                    foreach (var approach in newApproaches)
-                    {
-                        try
-                        {
-                            configContext.Approaches.Add(approach);
-                            configContext.SaveChanges();
-                            _logger.LogInformation($"Approach {approach.Id} Imported");
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex.Message, $"Error importing approach {approach.Id}");
-                        }
-                    }
-                }
-                configContext.Database.ExecuteSqlRaw("SET IDENTITY_INSERT dbo.Approaches OFF");
-                transaction.Commit();
-            }
-            catch (Exception ex)
-            {
-                transaction.Rollback();
-                _logger.LogError(ex, "Error Importing approaches");
-                throw;
-            }
+            AddRangePreservingIdentity(configContext, "Approaches", approaches);
+            _logger.LogInformation($"All Approaches Imported");
+        }
+        else
+        {
+            var approachIds = configContext.Approaches.AsNoTracking().Select(a => a.Id).ToList();
+            var newApproaches = approaches.Where(a => !approachIds.Contains(a.Id)).ToList();
+            AddRangePreservingIdentity(configContext, "Approaches", newApproaches);
+            _logger.LogInformation($"{newApproaches.Count} new Approaches Imported");
         }
     }
 
@@ -542,10 +505,14 @@ public class TransferConfigCommandHostedService : IHostedService
         _logger.LogInformation($"Devices Imported");
     }
 
-    private void ImportDetectors(Dictionary<string, string> queries, Dictionary<string, Dictionary<string, string>> columnMappings)
+    private async Task ImportDetectors(
+        Dictionary<string, string> queries,
+        Dictionary<string, Dictionary<string, string>> columnMappings,
+        CancellationToken cancellationToken)
     {
         using var scope = _serviceProvider.CreateScope();
         var configContext = scope.ServiceProvider.GetRequiredService<ConfigContext>();
+
         if (_config.Delete == true && configContext.Detectors.Any())
         {
             _logger.LogInformation("Detectors already exist");
@@ -553,93 +520,50 @@ public class TransferConfigCommandHostedService : IHostedService
         }
         _logger.LogInformation($"Importing Detectors");
 
-        var detectionTypes = configContext.DetectionTypes.ToList();
-        var detectionTypeDetectors = ImportData<DetectionTypeDetector>(queries["DetectionTypeDetector"], columnMappings["DetectionTypeDetector"]);
+        var detectionTypeDetectors = ImportData<DetectionTypeDetectorImportRow>(queries["DetectionTypeDetector"], columnMappings["DetectionTypeDetector"]);
+
         var detectors = ImportData<Detector>(queries["Detectors"], columnMappings["Detectors"]);
 
-        using (var transaction = configContext.Database.BeginTransaction())
+
+        if (_config.Delete)
         {
-            try
-            {
-                configContext.Database.ExecuteSqlRaw("SET IDENTITY_INSERT dbo.Detectors ON");
-
-                if (_config.Delete)
-                {
-                    const int batchSize = 5000;
-                    for (int i = 0; i < detectors.Count; i += batchSize)
-                    {
-                        var batch = detectors.Skip(i).Take(batchSize).ToList();
-                        foreach (var detectionType in detectionTypes)
-                        {
-
-                            if (detectionType.Id == DetectionTypes.B)
-                            {
-                                foreach (var detector in batch)
-                                {
-                                    detectionType.Detectors.Add(detector);
-                                }
-                            }
-                            else
-                            {
-                                var detectorIds = detectionTypeDetectors
-                                .Where(d => d.DetectionTypesId == (int)detectionType.Id)
-                                .Select(d => d.DetectorsId)
-                                .ToList();
-                                foreach (var detector in batch.Where(d => detectorIds.Contains(d.Id)))
-                                {
-                                    detectionType.Detectors.Add(detector);
-                                }
-                            }
-                        }
-                        configContext.Detectors.AddRange(batch);
-                        configContext.SaveChanges();
-                        _logger.LogInformation($"Processed batch of {batch.Count} detectors");
-                    }
-                    _logger.LogInformation($"Detectors Imported");
-                }
-                else
-                {
-                    var detectorIds = configContext.Detectors.Select(d => d.Id).ToList();
-                    var newDetectors = detectors.Where(d => !detectorIds.Contains(d.Id)).ToList();
-                    foreach (var detector in newDetectors)
-                    {
-                        try
-                        {
-                            configContext.Detectors.Add(detector);
-                            configContext.SaveChanges();
-                            _logger.LogInformation($"Detector {detector.DectectorIdentifier} Imported");
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex.Message, $"Error importing detector {detector.DectectorIdentifier}");
-                        }
-                    }
-                }
-                configContext.Database.ExecuteSqlRaw("SET IDENTITY_INSERT dbo.Detectors OFF");
-                transaction.Commit();
-            }
-            catch (Exception ex)
-            {
-                transaction.Rollback();
-                _logger.LogError(ex, "Error importing detectors");
-                throw;
-            }
+            AddRangePreservingIdentity(configContext, "Detectors", detectors);
+            _logger.LogInformation($"Detectors Imported");
         }
+        else
+        {
+            var detectorIds = configContext.Detectors.AsNoTracking().Select(d => d.Id).ToList();
+            var newDetectors = detectors.Where(d => !detectorIds.Contains(d.Id)).ToList();
+            AddRangePreservingIdentity(configContext, "Detectors", newDetectors);
+            _logger.LogInformation($"{newDetectors.Count} new Detectors Imported");
+        }
+
+        await DetectionTypeDetectorRelationshipImporter.ImportAsync(
+            configContext,
+            detectionTypeDetectors,
+            _logger,
+            clearExisting: true,
+            cancellationToken);
     }
 
     private void ImportLocations(Dictionary<string, string> queries, Dictionary<string, Dictionary<string, string>> columnMappings)
     {
         using var scope = _serviceProvider.CreateScope();
         var configContext = scope.ServiceProvider.GetRequiredService<ConfigContext>();
+
         if (_config.Delete == true && configContext.Locations.Any())
         {
             _logger.LogInformation("Locations already exist");
             return;
         }
         _logger.LogInformation($"Importing Locations...");
+
         var areas = configContext.Areas.ToList();
+
         var locationAreas = ImportData<AreaLocation>(queries["AreaLocations"], columnMappings["AreaLocations"]);
+
         var locations = ImportData<Location>(queries["Locations"], columnMappings["Locations"]);
+
         foreach (var area in areas)
         {
             var locationIds = locationAreas.Where(l => l.AreasId == area.Id).Select(l => l.LocationsId).ToList();
@@ -648,44 +572,25 @@ public class TransferConfigCommandHostedService : IHostedService
                 location.Areas.Add(area);
             }
         }
-        using (var transaction = configContext.Database.BeginTransaction())
+        if (_config.Delete)
         {
             try
             {
-                configContext.Database.ExecuteSqlRaw("SET IDENTITY_INSERT dbo.Locations ON");
-                if (_config.Delete)
-                {
-                        configContext.Locations.AddRange(locations);
-                        configContext.SaveChanges();
-                        _logger.LogInformation($"Locations Imported ({locations.Count} total)");
-                }
-                else
-                {
-                    var locationIds = configContext.Locations.Select(l => l.Id).ToList();
-                    var newLocations = locations.Where(l => !locationIds.Contains(l.Id)).ToList();
-                    foreach (var location in newLocations)
-                    {
-                        try
-                        {
-                            configContext.Locations.Add(location);
-                            configContext.SaveChanges();
-                            _logger.LogInformation($"Location {location.LocationIdentifier} Imported");
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.LogError(ex.Message, $"Error importing location {location.LocationIdentifier}");
-                        }
-                    }
-                }
-                configContext.Database.ExecuteSqlRaw("SET IDENTITY_INSERT dbo.Locations OFF");
-                transaction.Commit();
+                AddRangePreservingIdentity(configContext, "Locations", locations);
+                _logger.LogInformation($"Locations Imported");
             }
             catch (Exception ex)
             {
-                transaction.Rollback();
-                _logger.LogError(ex, "Error importing locations");
+                _logger.LogError(ex.Message, "Error importing locations");
                 throw;
             }
+        }
+        else
+        {
+            var locationIds = configContext.Locations.AsNoTracking().Select(l => l.Id).ToList();
+            var newLocations = locations.Where(l => !locationIds.Contains(l.Id)).ToList();
+            AddRangePreservingIdentity(configContext, "Locations", newLocations);
+            _logger.LogInformation($"{newLocations.Count} new Locations Imported");
         }
     }
 
@@ -1010,11 +915,4 @@ public class AreaLocation
     public int AreasId { get; set; }
     public int LocationsId { get; set; }
 }
-
-public class DetectionTypeDetector
-{
-    public int DetectionTypesId { get; set; }
-    public int DetectorsId { get; set; }
-}
-
 

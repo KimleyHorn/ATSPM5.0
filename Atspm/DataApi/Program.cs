@@ -1,5 +1,5 @@
-#region license
-// Copyright 2025 Utah Departement of Transportation
+﻿#region license
+// Copyright 2026 Utah Departement of Transportation
 // for DataApi - %Namespace%/Program.cs
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,14 +17,18 @@
 
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Formatters;
 using Microsoft.Extensions.Options;
-using Newtonsoft.Json;
-using System.Diagnostics;
+using System.Reflection;
+using System.Security.Claims;
 using System.Threading.RateLimiting;
 using Utah.Udot.Atspm.DataApi.CustomOperations;
-using Utah.Udot.NetStandardToolkit.Authentication;
-using Utah.Udot.NetStandardToolkit.Services;
+using Utah.Udot.Atspm.Infrastructure.Common;
+
+//git 1
+
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -100,7 +104,11 @@ app.UseAuthorization();
 //Cross-cutting
 app.UseResponseCompression();
 app.UseHttpLogging();
-//app.UseMiddleware<DownloadLoggingMiddleware>();
+app.UseMiddleware<UsageLoggingMiddleware>(
+    (HttpContext ctx) => Assembly.GetEntryAssembly()?.GetName().Name,
+    (HttpContext ctx, ControllerActionDescriptor? ad) => ad?.ActionName == "StreamData",
+    (HttpContext ctx, ControllerActionDescriptor? ad) => ad?.ActionName == "GetData",
+    (HttpContext ctx) => ctx.User?.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? ctx.User?.Identity?.Name);
 
 //Swagger
 app.UseConfiguredSwaggerUI();
@@ -261,130 +269,3 @@ public class RateLimitingPolicyService
         });
     }
 }
-
-public class DownloadLoggingMiddleware
-{
-    private readonly RequestDelegate _next;
-    //private readonly IDownloadLogRepository _repo;
-    private readonly ICurrentUserService<JwtUserSession> _currentUserService;
-
-    public DownloadLoggingMiddleware(RequestDelegate next, ICurrentUserService<JwtUserSession> currentUserService)//, IDownloadLogRepository repo)
-    {
-        _next = next;
-        _currentUserService = currentUserService;
-
-
-        //_repo = repo;
-    }
-
-    public async Task InvokeAsync(HttpContext context)
-    {
-        var sw = Stopwatch.StartNew();
-
-        var originalBodyStream = context.Response.Body;
-        using var memStream = new MemoryStream();
-        context.Response.Body = memStream;
-
-        string errorMessage = null;
-        try
-        {
-            await _next(context);
-        }
-        catch (Exception ex)
-        {
-            errorMessage = ex.Message;
-            throw;
-        }
-        finally
-        {
-            sw.Stop();
-            memStream.Seek(0, SeekOrigin.Begin);
-            var resultSizeBytes = memStream.Length;
-
-            // Optionally, try to parse result count if response is JSON array
-            int? resultCount = null;
-            if (context.Response.ContentType?.Contains("application/json") == true)
-            {
-                try
-                {
-                    var json = await new StreamReader(memStream).ReadToEndAsync();
-                    if (json.TrimStart().StartsWith("["))
-                    {
-                        var array = System.Text.Json.JsonDocument.Parse(json).RootElement;
-                        if (array.ValueKind == System.Text.Json.JsonValueKind.Array)
-                            resultCount = array.GetArrayLength();
-                    }
-                }
-                catch { /* ignore parse errors */ }
-                memStream.Seek(0, SeekOrigin.Begin);
-            }
-
-            var routeData = context.GetRouteData();
-            var controller = routeData.Values["controller"]?.ToString();
-            var action = routeData.Values["action"]?.ToString();
-
-            var test = _currentUserService.GetCurrentUser();
-
-            var log = new DownloadLog
-            {
-                Timestamp = DateTime.UtcNow,
-                TraceId = context.TraceIdentifier,
-                ConnectionId = context.Connection.Id,
-                RemoteIp = context.Connection.RemoteIpAddress?.ToString(),
-                UserAgent = context.Request.Headers["User-Agent"].ToString(),
-                UserId = context.User?.FindFirst("sub")?.Value ?? context.User?.Identity?.Name,
-                Route = context.Request.Path,
-                QueryString = context.Request.QueryString.ToString(),
-                Method = context.Request.Method,
-                StatusCode = context.Response.StatusCode,
-                DurationMs = sw.ElapsedMilliseconds,
-                Controller = controller,
-                Action = action,
-                ResultCount = resultCount,
-                ResultSizeBytes = resultSizeBytes,
-                Success = context.Response.StatusCode >= 200 && context.Response.StatusCode < 300,
-                ErrorMessage = errorMessage
-            };
-
-            //await _repo.LogAsync(log);
-
-            Console.WriteLine($"log: {log}");
-
-            memStream.Seek(0, SeekOrigin.Begin);
-            await memStream.CopyToAsync(originalBodyStream);
-            context.Response.Body = originalBodyStream;
-        }
-    }
-
-}
-
-public class DownloadLog
-{
-    public int Id { get; set; } // Optional: for database primary key
-    public DateTime Timestamp { get; set; }
-    public string TraceId { get; set; }
-    public string ConnectionId { get; set; }
-    public string RemoteIp { get; set; }
-    public string UserAgent { get; set; }
-    public string UserId { get; set; }
-    public string Route { get; set; }
-    public string QueryString { get; set; }
-    public string Method { get; set; }
-    public int StatusCode { get; set; }
-    public long DurationMs { get; set; }
-    // Optionally add more fields as needed:
-    public string Controller { get; set; }
-    public string Action { get; set; }
-    public int? ResultCount { get; set; }
-    public long? ResultSizeBytes { get; set; }
-    public bool Success { get; set; }
-    public string ErrorMessage { get; set; }
-
-    public override string? ToString()
-    {
-        return JsonConvert.SerializeObject(this, formatting: Formatting.Indented);
-    }
-}
-
-
-

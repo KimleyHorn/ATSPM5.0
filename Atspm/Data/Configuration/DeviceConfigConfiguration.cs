@@ -1,5 +1,5 @@
 ﻿#region license
-// Copyright 2025 Utah Departement of Transportation
+// Copyright 2026 Utah Departement of Transportation
 // for Data - Utah.Udot.Atspm.Data.Configuration/DeviceConfigConfiguration.cs
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,6 +43,7 @@ namespace Utah.Udot.Atspm.Data.Configuration
                 .HasMaxLength(512);
 
             builder.Property(e => e.Protocol)
+                .HasConversion<string>()
                 .HasMaxLength(Enum.GetNames(typeof(TransportProtocols)).Max().Length)
                 .HasDefaultValue(TransportProtocols.Unknown);
 

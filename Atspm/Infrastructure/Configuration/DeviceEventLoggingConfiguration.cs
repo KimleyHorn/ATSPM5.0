@@ -1,5 +1,5 @@
 ﻿#region license
-// Copyright 2025 Utah Departement of Transportation
+// Copyright 2026 Utah Departement of Transportation
 // for Infrastructure - Utah.Udot.Atspm.Infrastructure.Configuration/DeviceEventLoggingConfiguration.cs
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -28,6 +28,19 @@ namespace Utah.Udot.Atspm.Infrastructure.Configuration
         /// Path to local directory where event logs are saved
         /// </summary>
         public string Path { get; set; } = System.IO.Path.GetTempPath();
+
+        /// <summary>
+        /// Path to local directory where Frisco CSV event log files are deposited.
+        /// Only used when devices with <see cref="Utah.Udot.Atspm.Data.Enums.TransportProtocols.Csv"/>
+        /// are included in the logging run.
+        /// </summary>
+        public string CsvPath { get; set; } = System.IO.Path.GetTempPath();
+
+        /// <summary>
+        /// When <see langword="true"/>, each CSV source file is deleted after it has been
+        /// successfully imported. Set to <see langword="false"/> to keep files on disk.
+        /// </summary>
+        public bool DeleteCsvSource { get; set; } = true;
 
         /// <summary>
         /// Batch size of <see cref="EventLogModelBase"/> objects when saving to repository

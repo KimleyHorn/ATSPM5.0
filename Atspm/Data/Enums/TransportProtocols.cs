@@ -1,5 +1,5 @@
 ﻿#region license
-// Copyright 2025 Utah Departement of Transportation
+// Copyright 2026 Utah Departement of Transportation
 // for Data - Utah.Udot.Atspm.Data.Enums/TransportProtocols.cs
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -45,6 +45,11 @@ namespace Utah.Udot.Atspm.Data.Enums
         /// <summary>
         /// Supports HTTP Protocol
         /// </summary>
-        Http
+        Http,
+
+        /// <summary>
+        /// Reads CSV files from a local directory
+        /// </summary>
+        Csv
     }
 }

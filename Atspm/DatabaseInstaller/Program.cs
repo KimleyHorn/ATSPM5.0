@@ -1,5 +1,5 @@
 ﻿#region license
-// Copyright 2025 Utah Departement of Transportation
+// Copyright 2026 Utah Departement of Transportation
 // for DatabaseInstaller - %Namespace%/Program.cs
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -63,6 +63,7 @@ cmdBuilder.UseHost(hostBuilder =>
         services.Configure<TransferCommandConfiguration>(hostContext.Configuration.GetSection(nameof(TransferCommandConfiguration)));
         services.Configure<TransferConfigCommandConfiguration>(hostContext.Configuration.GetSection(nameof(TransferConfigCommandConfiguration)));
         services.Configure<ImportLocationsCommandConfiguration>(hostContext.Configuration.GetSection(nameof(ImportLocationsCommandConfiguration)));
+        services.Configure<ImportDetectionTypeDetectorCommandConfiguration>(hostContext.Configuration.GetSection(nameof(ImportDetectionTypeDetectorCommandConfiguration)));
 
     });
 },

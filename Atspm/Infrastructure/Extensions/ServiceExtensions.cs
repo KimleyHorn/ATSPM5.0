@@ -1,5 +1,5 @@
 ﻿#region license
-// Copyright 2025 Utah Departement of Transportation
+// Copyright 2026 Utah Departement of Transportation
 // for Infrastructure - Utah.Udot.Atspm.Infrastructure.Extensions/ServiceExtensions.cs
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -67,7 +67,20 @@ namespace Utah.Udot.Atspm.Infrastructure.Extensions
     {
         internal static DbContextOptionsBuilder GetDbProviderInfo<T>(this DbContextOptionsBuilder builder, HostBuilderContext host)
         {
-            var opt = host.Configuration.GetSection($"ConnectionStrings:{typeof(T).Name}").Get<DatabaseOption>();
+            var sectionKey = $"ConnectionStrings:{typeof(T).Name}";
+            var section = host.Configuration.GetSection(sectionKey);
+            var opt = section.Get<DatabaseOption>();
+
+            if (opt == null)
+            {
+                var allKeys = host.Configuration.AsEnumerable()
+                    .Where(kv => kv.Key.StartsWith("ConnectionStrings"))
+                    .Select(kv => $"{kv.Key}={kv.Value}");
+                throw new InvalidOperationException(
+                    $"Configuration section '{sectionKey}' could not be deserialized into DatabaseOption. " +
+                    $"Section exists: {section.Exists()}. " +
+                    $"All ConnectionStrings keys: [{string.Join(", ", allKeys)}]");
+            }
 
             switch (opt.Provider)
             {
@@ -98,7 +111,7 @@ namespace Utah.Udot.Atspm.Infrastructure.Extensions
 
                 default:
                     {
-                        return builder.UseSqlServer(opt.ConnectionString, opt => opt.MigrationsAssembly(SqlServerProvider.Migration));
+                        return builder.UseInMemoryDatabase(Guid.NewGuid().ToString());
                     }
             }
         }
@@ -154,6 +167,7 @@ namespace Utah.Udot.Atspm.Infrastructure.Extensions
         {
             services.AddScoped<IApproachRepository, ApproachEFRepository>();
             services.AddScoped<IAreaRepository, AreaEFRepository>();
+            services.AddScoped<IUsageEntryRepository, UsageEntryEFRepository>();
             services.AddScoped<IDetectionTypeRepository, DetectionTypeEFRepository>();
             services.AddScoped<IDetectorCommentRepository, DetectorCommentEFRepository>();
             services.AddScoped<IDetectorRepository, DetectorEFRepository>();
@@ -177,7 +191,6 @@ namespace Utah.Udot.Atspm.Infrastructure.Extensions
             services.AddScoped<IUserAreaRepository, UserAreaEFRepository>();
             services.AddScoped<IUserJurisdictionRepository, UserJurisdictionEFRepository>();
             services.AddScoped<IUserRegionRepository, UserRegionEFRepository>();
-            services.AddScoped<IVersionHistoryRepository, VersionHistoryEFRepository>();
             services.AddScoped<IWatchDogEventLogRepository, WatchDogLogEventEFRepository>();
             services.AddScoped<IWatchDogIgnoreEventRepository, WatchDogIgnoreEventEFRepository>();
 

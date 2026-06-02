@@ -1,5 +1,5 @@
 ﻿#region license
-// Copyright 2025 Utah Departement of Transportation
+// Copyright 2026 Utah Departement of Transportation
 // for Infrastructure - Utah.Udot.ATSPM.Infrastructure.WorkflowSteps/DownloadDeviceData.cs
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -43,10 +43,18 @@ namespace Utah.Udot.ATSPM.Infrastructure.WorkflowSteps
         {
             using (var scope = _services.CreateAsyncScope())
             {
-                var downloader = scope.ServiceProvider.GetServices<IDeviceDownloader>().First(c => c.CanExecute(input));
+                var downloader = scope.ServiceProvider.GetServices<IDeviceDownloader>().FirstOrDefault(c => c.CanExecute(input));
+
+                if (downloader == null)
+                    return EmptyAsync();
 
                 return downloader.Execute(input, cancelToken);
             }
+        }
+
+        private static async IAsyncEnumerable<Tuple<Device, FileInfo>> EmptyAsync()
+        {
+            yield break;
         }
     }
 }

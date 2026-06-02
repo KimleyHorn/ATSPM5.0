@@ -1,5 +1,5 @@
 ﻿#region license
-// Copyright 2025 Utah Departement of Transportation
+// Copyright 2026 Utah Departement of Transportation
 // for Infrastructure - Utah.Udot.ATSPM.Infrastructure.WorkflowSteps/DecodeDeviceData.cs
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -16,6 +16,7 @@
 #endregion
 
 using Microsoft.Extensions.DependencyInjection;
+using System.Runtime.CompilerServices;
 using System.Threading.Tasks.Dataflow;
 using Utah.Udot.Atspm.Data.Models.EventLogModels;
 using Utah.Udot.NetStandardToolkit.Workflows;
@@ -40,13 +41,18 @@ namespace Utah.Udot.ATSPM.Infrastructure.WorkflowSteps
         }
 
         /// <inheritdoc/>
-        protected override IAsyncEnumerable<Tuple<Device, EventLogModelBase>> Process(Tuple<Device, FileInfo> input, CancellationToken cancelToken = default)
+        protected override async IAsyncEnumerable<Tuple<Device, EventLogModelBase>> Process(Tuple<Device, FileInfo> input, [EnumeratorCancellation] CancellationToken cancelToken = default)
         {
-            using (var scope = _services.CreateAsyncScope())
-            {
-                var importer = scope.ServiceProvider.GetService<IEventLogImporter>();
+            // The scope must stay alive for the entire iteration of Execute(), because
+            // EventLogFileImporter and its dependencies (IOptionsSnapshot, IEventLogDecoder, etc.)
+            // are scoped services. Returning the IAsyncEnumerable directly and then disposing
+            // the scope causes a use-after-dispose once the caller iterates the sequence.
+            await using var scope = _services.CreateAsyncScope();
+            var importer = scope.ServiceProvider.GetService<IEventLogImporter>();
 
-                return importer.Execute(input, cancelToken);
+            await foreach (var item in importer.Execute(input, cancelToken).WithCancellation(cancelToken))
+            {
+                yield return item;
             }
         }
     }

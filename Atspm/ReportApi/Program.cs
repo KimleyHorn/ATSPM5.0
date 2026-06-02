@@ -1,5 +1,5 @@
 #region license
-// Copyright 2025 Utah Departement of Transportation
+// Copyright 2026 Utah Departement of Transportation
 // for ReportApi - %Namespace%/Program.cs
 // 
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -17,6 +17,8 @@
 
 using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Controllers;
+using System.Reflection;
 using Utah.Udot.Atspm.Business.AppoachDelay;
 using Utah.Udot.Atspm.Business.ApproachSpeed;
 using Utah.Udot.Atspm.Business.ApproachVolume;
@@ -42,10 +44,16 @@ using Utah.Udot.Atspm.Business.TurningMovementCounts;
 using Utah.Udot.Atspm.Business.WaitTime;
 using Utah.Udot.Atspm.Business.Watchdog;
 using Utah.Udot.Atspm.Business.YellowRedActivations;
+using Utah.Udot.Atspm.Infrastructure.Common;
 using Utah.Udot.Atspm.ReportApi.DataAggregation;
 using Utah.Udot.Atspm.ReportApi.ReportServices;
 using Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices;
+using Utah.Udot.ATSPM.ReportApi.DataAggregation;
 using Utah.Udot.ATSPM.ReportApi.ReportServices;
+
+//git 1
+
+AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -90,6 +98,7 @@ builder.Host
         //report services
         s.AddScoped<IReportService<AggregationOptions, IEnumerable<AggregationResult>>, AggregationReportService>();
         s.AddScoped<IReportService<ApproachDelayOptions, IEnumerable<ApproachDelayResult>>, ApproachDelayReportService>();
+        s.AddScoped<IReportService<PedatLocationDataQuery, IEnumerable<PedatLocationData>>, PedestrianAggregationService>();
         s.AddScoped<IReportService<ApproachSpeedOptions, IEnumerable<ApproachSpeedResult>>, ApproachSpeedReportService>();
         s.AddScoped<IReportService<ApproachVolumeOptions, IEnumerable<ApproachVolumeResult>>, ApproachVolumeReportService>();
         s.AddScoped<IReportService<ArrivalOnRedOptions, IEnumerable<ArrivalOnRedResult>>, ArrivalOnRedReportService>();
@@ -125,6 +134,7 @@ builder.Host
 
         //AggregationResult Services
         s.AddScoped<AggregationReportService>();
+        s.AddScoped<PedestrianAggregationService>();
         s.AddScoped<ApproachDelayService>();
         s.AddScoped<ApproachSpeedService>();
         s.AddScoped<ApproachVolumeService>();
@@ -192,6 +202,16 @@ builder.Host
 
         s.AddPathBaseFilter(h);
 
+        s.AddCors(options =>
+        {
+            options.AddPolicy("AllowAll", policy =>
+                policy
+                    .AllowAnyOrigin()
+                    .AllowAnyMethod()
+                    .AllowAnyHeader()
+            );
+        });
+
         s.AddAtspmIdentity(h);
         s.AddHealthChecks();
     });
@@ -213,14 +233,18 @@ else
 
 //Security
 app.UseHttpsRedirection();
-app.UseCors("Default");
+app.UseCors("AllowAll");
 app.UseAuthentication();
 app.UseAuthorization();
 
 //Cross-cutting
 app.UseResponseCompression();
 app.UseHttpLogging();
-//app.UseMiddleware<DownloadLoggingMiddleware>();
+app.UseMiddleware<UsageLoggingMiddleware>(
+    (HttpContext ctx) => Assembly.GetEntryAssembly()?.GetName().Name,
+    (HttpContext ctx, ControllerActionDescriptor? ad) => false,
+    (HttpContext ctx, ControllerActionDescriptor? ad) => ad?.ActionName == "GetReportData",
+    (HttpContext ctx) => ctx.User?.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value ?? ctx.User?.Identity?.Name);
 
 //Swagger
 app.UseConfiguredSwaggerUI();
