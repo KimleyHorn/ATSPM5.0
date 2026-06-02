@@ -195,7 +195,6 @@ namespace Utah.Udot.Atspm.EventLogUtility.Commands
         public CsvPathCommandOption() : base("--csv-path", "Path to directory containing Frisco CSV event log files")
         {
             AddAlias("-cp");
-            SetDefaultValue(System.IO.Path.GetTempPath());
         }
     }
 
