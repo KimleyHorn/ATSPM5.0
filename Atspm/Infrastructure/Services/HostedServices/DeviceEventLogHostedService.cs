@@ -1,4 +1,4 @@
-﻿#region license
+#region license
 // Copyright 2026 Utah Departement of Transportation
 // for Infrastructure - Utah.Udot.Atspm.Infrastructure.Services.HostedServices/DeviceEventLogHostedService.cs
 // 
@@ -46,10 +46,10 @@ namespace Utah.Udot.Atspm.Infrastructure.Services.HostedServices
             var repo = scope.ServiceProvider.GetService<IDeviceRepository>();
 
             var workflow = new DeviceEventLogWorkflow(scope.ServiceProvider.GetService<IServiceScopeFactory>(), _options.Value.BatchSize, _options.Value.ParallelProcesses, cancellationToken);
-            // WorkflowBase constructor calls BeginInit() which runs Initialize() in the background.
-            // Calling Initialize() explicitly again would race with the background task, causing
-            // LinkSteps() to execute twice and BroadcastBlock to deliver each item twice.
-            // Instead, wait for the background initialization to complete.
+            // ServiceObjectBase only calls BeginInit() when initialize:true is passed to its constructor.
+            // WorkflowBase does not pass initialize:true, so we must call BeginInit() explicitly here
+            // to trigger Initialize() in the background, then wait for the Initialized event.
+            workflow.BeginInit();
             await WaitForInitializedAsync(workflow, cancellationToken);
 
             if (workflow.Input == null)
@@ -79,6 +79,7 @@ namespace Utah.Udot.Atspm.Infrastructure.Services.HostedServices
             if (anyCsvDevices)
             {
                 var csvWorkflow = new DecodeEventLogWorkflow(scope.ServiceProvider.GetService<IServiceScopeFactory>(), _options.Value.BatchSize > 0 ? _options.Value.BatchSize : 50000, cancellationToken);
+                csvWorkflow.BeginInit();
                 await WaitForInitializedAsync(csvWorkflow, cancellationToken);
                 await ProcessCsvDevices(scope, repo, csvWorkflow, cancellationToken);
             }
@@ -86,24 +87,31 @@ namespace Utah.Udot.Atspm.Infrastructure.Services.HostedServices
 
         /// <summary>
         /// Scans <see cref="DeviceEventLoggingConfiguration.CsvPath"/> for <c>*.csv</c> files,
-        /// reads the intersection number from each file's header line 2, looks up the matching
-        /// <see cref="Device"/>, and sends <c>Tuple&lt;Device, FileInfo&gt;</c> into the
-        /// <see cref="DecodeEventLogWorkflow"/> pipeline.
+        /// reads the intersection number from each file's header line 2, validates it exists in the
+        /// Locations table, looks up the matching <see cref="Device"/>, and sends 
+        /// <c>Tuple&lt;Device, FileInfo&gt;</c> into the <see cref="DecodeEventLogWorkflow"/> pipeline.
         /// </summary>
         private async Task ProcessCsvDevices(IServiceScope scope, IDeviceRepository repo, DecodeEventLogWorkflow csvWorkflow, CancellationToken cancellationToken)
         {
+            var locationRepo = scope.ServiceProvider.GetService<ILocationRepository>();
             var csvPath = _options.Value.CsvPath;
             var dir = new DirectoryInfo(csvPath);
 
             if (!dir.Exists)
+            {
+                log.LogWarning("CSV directory does not exist or is not accessible: {CsvPath}", csvPath);
                 return;
+            }
 
             var files = dir.GetFiles("*.csv", SearchOption.AllDirectories);
+            log.LogInformation("Found {FileCount} CSV file(s) in {CsvPath}", files.Length, csvPath);
 
             // Load all CSV-protocol devices once for matching
             var csvDevices = repo.GetList()
                 .Where(d => d.LoggingEnabled && d.DeviceConfiguration != null && d.DeviceConfiguration.Protocol == TransportProtocols.Csv)
                 .ToList();
+
+            log.LogInformation("Found {DeviceCount} CSV-protocol device(s) in database", csvDevices.Count);
 
             // Track files that were successfully queued so we can delete them AFTER the workflow finishes
             var queuedFiles = new List<FileInfo>();
@@ -115,17 +123,34 @@ namespace Utah.Udot.Atspm.Infrastructure.Services.HostedServices
                 var intersectionId = ReadIntersectionIdFromCsvHeader(file);
 
                 if (intersectionId == null)
+                {
+                    log.LogWarning("Could not parse intersection ID from CSV header: {FileName}", file.Name);
                     continue;
+                }
+
+                // Check if the location exists in the database
+                var locationExists = await locationRepo.LocationExists(intersectionId);
+                if (!locationExists)
+                {
+                    log.LogWarning("Location with ID '{IntersectionId}' does not exist in database. Skipping file {FileName}", intersectionId, file.Name);
+                    continue;
+                }
 
                 var device = csvDevices.FirstOrDefault(d => d.DeviceIdentifier == intersectionId);
 
                 if (device == null)
+                {
+                    log.LogWarning("No matching device found for intersection ID '{IntersectionId}' from file {FileName}", intersectionId, file.Name);
                     continue;
+                }
 
+                log.LogDebug("Queuing file {FileName} for device {DeviceIdentifier}", file.Name, device.DeviceIdentifier);
                 await csvWorkflow.Input.SendAsync(Tuple.Create(device, file));
 
                 queuedFiles.Add(file);
             }
+
+            log.LogInformation("Queued {QueuedCount} of {FileCount} CSV file(s) for decoding", queuedFiles.Count, files.Length);
 
             csvWorkflow.Input.Complete();
             await Task.WhenAll(csvWorkflow.Steps.Select(s => s.Completion));
@@ -142,10 +167,10 @@ namespace Utah.Udot.Atspm.Infrastructure.Services.HostedServices
         }
 
         /// <summary>
-        /// Waits for a workflow's background initialization (started by the WorkflowBase constructor
-        /// via BeginInit) to complete. Calling <c>Initialize()</c> explicitly a second time races
-        /// with the background task and causes <c>LinkSteps()</c> to execute twice, resulting in the
-        /// BroadcastBlock delivering each item to downstream steps twice.
+        /// Waits for a workflow's initialization (started via <c>BeginInit()</c>) to complete.
+        /// <c>ServiceObjectBase</c> only auto-calls <c>BeginInit()</c> when <c>initialize:true</c> is
+        /// passed to its constructor; <c>WorkflowBase</c> does not, so callers must call
+        /// <c>BeginInit()</c> explicitly before calling this method.
         /// </summary>
         private static async Task WaitForInitializedAsync(Utah.Udot.NetStandardToolkit.BaseClasses.ServiceObjectBase workflow, CancellationToken ct)
         {
