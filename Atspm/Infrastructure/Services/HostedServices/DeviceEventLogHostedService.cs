@@ -1,4 +1,4 @@
-﻿#region license
+#region license
 // Copyright 2026 Utah Departement of Transportation
 // for Infrastructure - Utah.Udot.Atspm.Infrastructure.Services.HostedServices/DeviceEventLogHostedService.cs
 // 
@@ -87,12 +87,13 @@ namespace Utah.Udot.Atspm.Infrastructure.Services.HostedServices
 
         /// <summary>
         /// Scans <see cref="DeviceEventLoggingConfiguration.CsvPath"/> for <c>*.csv</c> files,
-        /// reads the intersection number from each file's header line 2, looks up the matching
-        /// <see cref="Device"/>, and sends <c>Tuple&lt;Device, FileInfo&gt;</c> into the
-        /// <see cref="DecodeEventLogWorkflow"/> pipeline.
+        /// reads the intersection number from each file's header line 2, validates it exists in the
+        /// Locations table, looks up the matching <see cref="Device"/>, and sends 
+        /// <c>Tuple&lt;Device, FileInfo&gt;</c> into the <see cref="DecodeEventLogWorkflow"/> pipeline.
         /// </summary>
         private async Task ProcessCsvDevices(IServiceScope scope, IDeviceRepository repo, DecodeEventLogWorkflow csvWorkflow, CancellationToken cancellationToken)
         {
+            var locationRepo = scope.ServiceProvider.GetService<ILocationRepository>();
             var csvPath = _options.Value.CsvPath;
             var dir = new DirectoryInfo(csvPath);
 
@@ -124,6 +125,14 @@ namespace Utah.Udot.Atspm.Infrastructure.Services.HostedServices
                 if (intersectionId == null)
                 {
                     log.LogWarning("Could not parse intersection ID from CSV header: {FileName}", file.Name);
+                    continue;
+                }
+
+                // Check if the location exists in the database
+                var locationExists = await locationRepo.LocationExists(intersectionId);
+                if (!locationExists)
+                {
+                    log.LogWarning("Location with ID '{IntersectionId}' does not exist in database. Skipping file {FileName}", intersectionId, file.Name);
                     continue;
                 }
 
