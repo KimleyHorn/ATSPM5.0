@@ -25,13 +25,19 @@ using System.CommandLine.Builder;
 using System.CommandLine.Hosting;
 using System.CommandLine.Parsing;
 using Utah.Udot.Atspm.Data;
-using Utah.Udot.Atspm.Data.Models;
+using Utah.Udot.Atspm.Data.Models.IdentityModels;
 using Utah.Udot.Atspm.Infrastructure.Extensions;
 using Utah.Udot.Atspm.Services;
 using Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices;
 using Utah.Udot.ATSPM.WatchDog.Commands;
 
 //gitactions: IIII
+
+if (args.Length == 0)
+{
+    Console.Error.WriteLine("Required command was not provided. Use 'generate' to run the watchdog scan.");
+    return 1;
+}
 
 var rootCmd = new WatchdogCommand();
 var cmdBuilder = new CommandLineBuilder(rootCmd);
@@ -50,10 +56,10 @@ cmdBuilder.UseHost(hostBuilder =>
     {
         c.AddUserSecrets<Program>(optional: true); // Load secrets first
         //c.AddCommandLine(args);                    // Override with command-line args
-
     })
     .ConfigureServices((h, s) =>
     {
+        s.AddSingleton(TimeProvider.System);
         s.AddEmailServices(h);
         s.AddAtspmDbContext(h);
         s.AddAtspmEFConfigRepositories();
@@ -91,4 +97,4 @@ host =>
 });
 
 var cmdParser = cmdBuilder.Build();
-await cmdParser.InvokeAsync(args);
+return await cmdParser.InvokeAsync(args);

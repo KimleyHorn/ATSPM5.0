@@ -1,7 +1,7 @@
 import Markers from '@/components/LocationMap/Markers'
 import MapFilters from '@/components/MapFilters'
 import { Location } from '@/features/locations/types'
-import { getEnv } from '@/utils/getEnv'
+import { useEnv } from '@/hooks/useEnv'
 import ClearIcon from '@mui/icons-material/Clear'
 import {
   Box,
@@ -52,7 +52,9 @@ const LocationMap = ({
   updateFilters,
 }: LocationMapProps) => {
   const theme = useTheme()
+  const env = useEnv()
   const [mapRef, setMapRef] = useState<LeafletMap | null>(null)
+  const [googleSession, setGoogleSession] = useState<string | null>(null)
   const [isFiltersOpen, setIsFiltersOpen] = useState(false)
   const [hasFocusedRoute, setHasFocusedRoute] = useState(false)
   const filtersButtonRef = useRef(null)
@@ -69,29 +71,26 @@ const LocationMap = ({
   const selectedLocationZoom = zoom ?? mapInfo?.zoomLevel ?? 16
 
   useEffect(() => {
-    const fetchEnv = async () => {
-      const env = await getEnv()
-      if (!env) return
-      setMapInfo({
-        tile_layer: env.MAP_TILE_LAYER,
-        attribution: env.MAP_TILE_ATTRIBUTION,
-        initialLat: parseFloat(env.MAP_DEFAULT_LATITUDE ?? '0'),
-        initialLong: parseFloat(env.MAP_DEFAULT_LONGITUDE ?? '0'),
-        zoomLevel: parseInt(env.MAP_DEFAULT_ZOOM ?? '0'),
-      })
-    }
-    fetchEnv()
-  }, [])
+    setMapInfo({
+      tile_layer: env.MAP_TILE_LAYER ?? undefined,
+      attribution: env.MAP_TILE_ATTRIBUTION ?? undefined,
+      initialLat: parseFloat(env.MAP_DEFAULT_LATITUDE ?? '0'),
+      initialLong: parseFloat(env.MAP_DEFAULT_LONGITUDE ?? '0'),
+      zoomLevel: parseInt(env.MAP_DEFAULT_ZOOM ?? '6', 10),
+    })
+  }, [env])
 
   useEffect(() => {
-    if (location && mapRef) {
-      const markerLocation = locations.find((loc) => loc.id === location.id)
-      if (markerLocation) {
-        const { latitude, longitude } = markerLocation
-        mapRef.setView([latitude, longitude], selectedLocationZoom)
-      }
+    const run = async () => {
+      try {
+        const r = await fetch('/api/google/tiles/session', { method: 'POST' })
+        if (!r.ok) return
+        const data = (await r.json()) as { session?: string | null }
+        setGoogleSession(data.session ?? null)
+      } catch {}
     }
-  }, [location, mapRef, locations, selectedLocationZoom])
+    run()
+  }, [])
 
   useEffect(() => {
     if (location && mapRef) {
@@ -235,7 +234,17 @@ const LocationMap = ({
         </Box>
       </ClickAwayListener>
 
-      <TileLayer attribution={mapInfo.attribution} url={mapInfo.tile_layer} />
+      {googleSession ? (
+        <TileLayer
+          attribution={
+            mapInfo.attribution
+          }
+          url={`/api/google/tiles/{z}/{x}/{y}?session=${encodeURIComponent(googleSession)}`}
+          crossOrigin
+        />
+      ) : (
+        <TileLayer attribution={mapInfo.attribution} url={mapInfo.tile_layer} />
+      )}
       <Markers locations={filteredLocations} setLocation={setLocation} />
       {route && route.length > 0 && (
         <Polyline

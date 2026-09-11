@@ -14,16 +14,14 @@ import {
   useGetProducts,
 } from '@/features/products/api/index'
 import ProductEditorModal from '@/features/products/components/ProductEditorModal'
-import { toUTCDateStamp } from '@/utils/dateTime'
+import { formatInstantAsLocalDate } from '@/utils/dateTime'
 import { Backdrop, CircularProgress } from '@mui/material'
 
 const ProductsAdmin = () => {
   const pageAccess = useViewPage(PageNames.Products)
 
-  const hasLocationsEditClaim = useUserHasClaim('LocationConfiguration:Edit')
-  const hasLocationsDeleteClaim = useUserHasClaim(
-    'LocationConfiguration:Delete'
-  )
+  const hasDeviceEditClaim = useUserHasClaim('Device:Edit')
+  const hasDeviceDeleteClaim = useUserHasClaim('Device:Delete')
 
   const { mutateAsync: createMutation } = useCreateProduct()
   const { mutateAsync: deleteMutation } = useDeleteProduct()
@@ -44,8 +42,6 @@ const ProductsAdmin = () => {
   const onModalClose = () => {
     //do something?? potentially just delete
   }
-
-  const handleDeleteModalClose = () => undefined
 
   const HandleCreateProduct = async (productData: Product) => {
     const { manufacturer, model, webPage, notes } = productData
@@ -102,8 +98,8 @@ const ProductsAdmin = () => {
   const filteredData = products.map((obj: Product) => {
     return {
       ...obj,
-      created: obj.created ? toUTCDateStamp(obj.created) : '',
-      modified: obj.modified ? toUTCDateStamp(obj.modified) : '',
+      created: formatInstantAsLocalDate(obj.created),
+      modified: formatInstantAsLocalDate(obj.modified),
     }
   })
 
@@ -120,8 +116,8 @@ const ProductsAdmin = () => {
         pageName="Product"
         cells={cells}
         data={filteredData}
-        hasEditPrivileges={hasLocationsEditClaim}
-        hasDeletePrivileges={hasLocationsDeleteClaim}
+        hasEditPrivileges={hasDeviceEditClaim}
+        hasDeletePrivileges={hasDeviceDeleteClaim}
         editModal={
           <ProductEditorModal
             isOpen={true}
@@ -130,11 +126,13 @@ const ProductsAdmin = () => {
           />
         }
         createModal={
-          <ProductEditorModal
-            isOpen={true}
-            onSave={HandleCreateProduct}
-            onClose={onModalClose}
-          />
+          hasDeviceEditClaim ? (
+            <ProductEditorModal
+              isOpen={true}
+              onSave={HandleCreateProduct}
+              onClose={onModalClose}
+            />
+          ) : undefined
         }
         deleteModal={
           <DeleteModal
@@ -145,7 +143,7 @@ const ProductsAdmin = () => {
               `${selectedRow.manufacturer} - ${selectedRow.model}`
             }
             open={false}
-            onClose={handleDeleteModalClose}
+            onClose={onModalClose}
             onConfirm={HandleDeleteProduct}
           />
         }

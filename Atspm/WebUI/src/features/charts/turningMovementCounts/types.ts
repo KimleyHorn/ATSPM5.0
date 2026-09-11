@@ -24,10 +24,13 @@ import {
 
 export interface TurningMovementCountsChartOptions extends BaseChartOptions {
   binSize: number
+  combineThruRight?: boolean
 }
 
 export interface TurningMovementCountsChartOptionsDefaults {
   binSize: { id: number; value: string; option: string }
+  yAxisDefault: { id: number; value: string; option: string }
+  combineThruRight?: { id: number; value: string; option: string }
 }
 
 export type Plan = BasePlan
@@ -47,10 +50,10 @@ export interface RawTurningMovementCountsData extends BaseChartData {
   lanes: Lane[]
   totalHourlyVolumes?: DataPoint[]
   totalVolume: number
-  peakHour: string
-  peakHourVolume: number
-  peakHourFactor: number
-  laneUtilizationFactor: number
+  peakHour: string | null
+  peakHourVolume: number | null
+  peakHourFactor: number | null
+  laneUtilizationFactor: number | null
 }
 
 export interface RawTurningMovementCountsResponse {

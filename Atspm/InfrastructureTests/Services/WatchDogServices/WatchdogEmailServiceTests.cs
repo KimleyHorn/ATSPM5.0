@@ -21,6 +21,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Mail;
+using System.Threading;
 using System.Threading.Tasks;
 using Utah.Udot.Atspm.Business.Watchdog;
 using Utah.Udot.Atspm.Data.Enums;
@@ -35,12 +36,13 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices.Tests
         private readonly Mock<ILogger<WatchdogEmailService>> _loggerMock;
         private readonly Mock<IEmailService> _emailServiceMock;
         private readonly WatchdogEmailService _watchdogEmailService;
+        private readonly TimeProvider _weekdayClock = new FixedTimeProvider(new DateTimeOffset(2026, 4, 24, 12, 0, 0, TimeSpan.Zero));
 
         public WatchdogEmailServiceTests()
         {
             _loggerMock = new Mock<ILogger<WatchdogEmailService>>();
             _emailServiceMock = new Mock<IEmailService>();
-            _watchdogEmailService = new WatchdogEmailService(_loggerMock.Object, _emailServiceMock.Object);
+            _watchdogEmailService = new WatchdogEmailService(_loggerMock.Object, _emailServiceMock.Object, _weekdayClock);
         }
 
         [Fact]
@@ -49,15 +51,15 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices.Tests
             // Arrange
             var eventsContainer = new List<WatchDogLogEventWithCountAndDate>
             {
-                new WatchDogLogEventWithCountAndDate(1, "Loc1", DateTime.UtcNow, WatchDogComponentTypes.Location, 100, WatchDogIssueTypes.RecordCount, "Record count issue", 1),
-                new WatchDogLogEventWithCountAndDate(1, "Loc2", DateTime.UtcNow, WatchDogComponentTypes.Location, 101, WatchDogIssueTypes.ForceOffThreshold, "Force off threshold issue", 1),
-                new WatchDogLogEventWithCountAndDate(1, "Loc3", DateTime.UtcNow, WatchDogComponentTypes.Location, 102, WatchDogIssueTypes.MaxOutThreshold, "Max out threshold issue", 1),
-                new WatchDogLogEventWithCountAndDate(1, "Loc4", DateTime.UtcNow, WatchDogComponentTypes.Location, 103, WatchDogIssueTypes.LowDetectorHits, "Low detector hits issue", 1),
-                new WatchDogLogEventWithCountAndDate(1, "Loc5", DateTime.UtcNow, WatchDogComponentTypes.Location, 104, WatchDogIssueTypes.StuckPed, "Stuck ped issue", 1),
-                new WatchDogLogEventWithCountAndDate(1, "Loc6", DateTime.UtcNow, WatchDogComponentTypes.Location, 105, WatchDogIssueTypes.UnconfiguredApproach, "Unconfigured approach issue", 1),
-                new WatchDogLogEventWithCountAndDate(1, "Loc7", DateTime.UtcNow, WatchDogComponentTypes.Location, 106, WatchDogIssueTypes.UnconfiguredDetector, "Unconfigured detector issue", 1),
-                new WatchDogLogEventWithCountAndDate(1, "Loc8", DateTime.UtcNow, WatchDogComponentTypes.Location, 107, WatchDogIssueTypes.LowRampDetectorHits, "Ramp Detectors Threshold issue", 1),
-                new WatchDogLogEventWithCountAndDate(1, "Loc9", DateTime.UtcNow, WatchDogComponentTypes.Location, 108, WatchDogIssueTypes.RampMissedDetectorHits, "Ramp Missed Detectors issue", 1)
+                new WatchDogLogEventWithCountAndDate(1, "Loc1", DateTime.UtcNow, WatchDogComponentTypes.Location, 100, WatchDogIssueTypes.RecordCount, "Record count issue","1", 1),
+                new WatchDogLogEventWithCountAndDate(1, "Loc2", DateTime.UtcNow, WatchDogComponentTypes.Location, 101, WatchDogIssueTypes.ForceOffThreshold, "Force off threshold issue","1", 1),
+                new WatchDogLogEventWithCountAndDate(1, "Loc3", DateTime.UtcNow, WatchDogComponentTypes.Location, 102, WatchDogIssueTypes.MaxOutThreshold, "Max out threshold issue","1", 1),
+                new WatchDogLogEventWithCountAndDate(1, "Loc4", DateTime.UtcNow, WatchDogComponentTypes.Location, 103, WatchDogIssueTypes.LowDetectorHits, "Low detector hits issue","1", 1),
+                new WatchDogLogEventWithCountAndDate(1, "Loc5", DateTime.UtcNow, WatchDogComponentTypes.Location, 104, WatchDogIssueTypes.StuckPed, "Stuck ped issue","1", 1),
+                new WatchDogLogEventWithCountAndDate(1, "Loc6", DateTime.UtcNow, WatchDogComponentTypes.Location, 105, WatchDogIssueTypes.UnconfiguredApproach, "Unconfigured approach issue","1", 1),
+                new WatchDogLogEventWithCountAndDate(1, "Loc7", DateTime.UtcNow, WatchDogComponentTypes.Location, 106, WatchDogIssueTypes.UnconfiguredDetector, "Unconfigured detector issue","1", 1),
+                new WatchDogLogEventWithCountAndDate(1, "Loc8", DateTime.UtcNow, WatchDogComponentTypes.Location, 107, WatchDogIssueTypes.LowRampDetectorHits, "Ramp Detectors Threshold issue","1", 1),
+                new WatchDogLogEventWithCountAndDate(1, "Loc9", DateTime.UtcNow, WatchDogComponentTypes.Location, 108, WatchDogIssueTypes.RampMissedDetectorHits, "Ramp Missed Detectors issue","1", 1)
             };
 
             // Act
@@ -126,10 +128,10 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices.Tests
             // Arrange
             var eventsContainer = new List<WatchDogLogEventWithCountAndDate>
             {
-                new WatchDogLogEventWithCountAndDate(1, "Loc1", DateTime.UtcNow, WatchDogComponentTypes.Location, 100, WatchDogIssueTypes.RecordCount, "Record count issue", 1),
-                new WatchDogLogEventWithCountAndDate(1, "Loc2", DateTime.UtcNow, WatchDogComponentTypes.Location, 101, WatchDogIssueTypes.RecordCount, "Another record count issue", 1),
-                new WatchDogLogEventWithCountAndDate(1, "Loc3", DateTime.UtcNow, WatchDogComponentTypes.Location, 102, WatchDogIssueTypes.ForceOffThreshold, "Force off threshold issue", 1),
-                new WatchDogLogEventWithCountAndDate(1, "Loc4", DateTime.UtcNow, WatchDogComponentTypes.Location, 103, WatchDogIssueTypes.ForceOffThreshold, "Another force off threshold issue", 1)
+                new WatchDogLogEventWithCountAndDate(1, "Loc1", DateTime.UtcNow, WatchDogComponentTypes.Location, 100, WatchDogIssueTypes.RecordCount, "Record count issue","1", 1),
+                new WatchDogLogEventWithCountAndDate(1, "Loc2", DateTime.UtcNow, WatchDogComponentTypes.Location, 101, WatchDogIssueTypes.RecordCount, "Another record count issue","1", 1),
+                new WatchDogLogEventWithCountAndDate(1, "Loc3", DateTime.UtcNow, WatchDogComponentTypes.Location, 102, WatchDogIssueTypes.ForceOffThreshold, "Force off threshold issue","1", 1),
+                new WatchDogLogEventWithCountAndDate(1, "Loc4", DateTime.UtcNow, WatchDogComponentTypes.Location, 103, WatchDogIssueTypes.ForceOffThreshold, "Another force off threshold issue","1", 1)
             };
 
             // Act
@@ -187,7 +189,7 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices.Tests
             var eventsContainer = new List<WatchDogLogEventWithCountAndDate>
     {
         null,
-        new WatchDogLogEventWithCountAndDate(1, "Loc1", DateTime.UtcNow, WatchDogComponentTypes.Location, 100, WatchDogIssueTypes.RecordCount, "Record count issue", 1),
+        new WatchDogLogEventWithCountAndDate(1, "Loc1", DateTime.UtcNow, WatchDogComponentTypes.Location, 100, WatchDogIssueTypes.RecordCount, "Record count issue","1", 1),
         null
     };
 
@@ -273,7 +275,23 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices.Tests
             var headers = WatchdogEmailService.GetTableHeadersForErrorType(sectionTitle, includeErrorCounts, includeConsecutive);
 
             // Assert
-            var expectedHeaders = new List<string> { "Location", "Location Description", "Detector Id", "Issue Details", "Date of First Occurrence" };
+            var expectedHeaders = new List<string> { "Location", "Location Description", "Detector Config Id", "Issue Details", "Date of First Occurrence" };
+            Assert.Equal(expectedHeaders, headers);
+        }
+
+        [Fact]
+        public void GetTableHeadersForErrorType_ShouldReturnHeadersForRampErrors()
+        {
+            // Arrange
+            var sectionTitle = "Ramp Mainline Errors";
+            var includeErrorCounts = false;
+            var includeConsecutive = false;
+
+            // Act
+            var headers = WatchdogEmailService.GetTableHeadersForErrorType(sectionTitle, includeErrorCounts, includeConsecutive);
+
+            // Assert
+            var expectedHeaders = new List<string> { "Location", "Location Description", "Detector Config Id", "Issue Details", "Date of First Occurrence" };
             Assert.Equal(expectedHeaders, headers);
         }
 
@@ -340,13 +358,13 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices.Tests
             var sectionTimeDescription = "Errors detected in the last 24 hours.";
             var errorLogs = new List<WatchDogLogEventWithCountAndDate>
             {
-                new WatchDogLogEventWithCountAndDate(1, "Loc1", DateTime.UtcNow, WatchDogComponentTypes.Location, 100, WatchDogIssueTypes.RecordCount, "Issue details 1", null)
+                new WatchDogLogEventWithCountAndDate(1, "Loc1", DateTime.UtcNow, WatchDogComponentTypes.Location, 100, WatchDogIssueTypes.RecordCount, "Issue details 1","1", null)
                 {
                     EventCount = 5,
                     ConsecutiveOccurenceCount = 3,
                     DateOfFirstInstance = DateTime.UtcNow.AddDays(-10)
                 },
-                new WatchDogLogEventWithCountAndDate(2, "Loc2", DateTime.UtcNow, WatchDogComponentTypes.Location, 101, WatchDogIssueTypes.RecordCount, "Issue details 2", null)
+                new WatchDogLogEventWithCountAndDate(2, "Loc2", DateTime.UtcNow, WatchDogComponentTypes.Location, 101, WatchDogIssueTypes.RecordCount, "Issue details 2","1", null)
                 {
                     EventCount = 10,
                     ConsecutiveOccurenceCount = 5,
@@ -455,7 +473,7 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices.Tests
             var sectionTimeDescription = "Errors detected in the past hour.";
             var errorLogs = new List<WatchDogLogEventWithCountAndDate>
             {
-                new WatchDogLogEventWithCountAndDate(1, "Loc1", DateTime.UtcNow, WatchDogComponentTypes.Detector, 100, WatchDogIssueTypes.LowDetectorHits, "Details", null)
+                new WatchDogLogEventWithCountAndDate(1, "Loc1", DateTime.UtcNow, WatchDogComponentTypes.Detector, 100, WatchDogIssueTypes.LowDetectorHits, "Details","1", null)
                 {
                     EventCount = 5,
                     ConsecutiveOccurenceCount = 3,
@@ -546,7 +564,7 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices.Tests
             var errorSubHeader = "Some errors detected.";
             var errors = new List<WatchDogLogEventWithCountAndDate>
             {
-                new WatchDogLogEventWithCountAndDate(1, "Loc1", DateTime.UtcNow, WatchDogComponentTypes.Location, 100, WatchDogIssueTypes.RecordCount, "Issue details", null)
+                new WatchDogLogEventWithCountAndDate(1, "Loc1", DateTime.UtcNow, WatchDogComponentTypes.Location, 100, WatchDogIssueTypes.RecordCount, "Issue details","1", null)
             };
             var options = new WatchdogEmailOptions
             {
@@ -577,8 +595,8 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices.Tests
             var errorSubHeader = "Some errors detected.";
             var errors = new List<WatchDogLogEventWithCountAndDate>
             {
-                new WatchDogLogEventWithCountAndDate(1, "Loc1", DateTime.UtcNow, WatchDogComponentTypes.Location, 100, WatchDogIssueTypes.RecordCount, "Issue details", null),
-                new WatchDogLogEventWithCountAndDate(2, "Loc2", DateTime.UtcNow, WatchDogComponentTypes.Detector, 101, WatchDogIssueTypes.LowDetectorHits, "Detector issue details", null)
+                new WatchDogLogEventWithCountAndDate(1, "Loc1", DateTime.UtcNow, WatchDogComponentTypes.Location, 100, WatchDogIssueTypes.RecordCount, "Issue details","1", null),
+                new WatchDogLogEventWithCountAndDate(2, "Loc2", DateTime.UtcNow, WatchDogComponentTypes.Detector, 101, WatchDogIssueTypes.LowDetectorHits, "Detector issue details","1", null)
             };
             var options = new WatchdogEmailOptions
             {
@@ -681,7 +699,7 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices.Tests
             var options = new WatchdogEmailOptions { EmailAllErrors = false };
             var logsFromPreviousDay = new List<WatchDogLogEvent>
             {
-                new WatchDogLogEvent(1, "Loc1", DateTime.Parse("2026-01-20T21:07:41Z"), WatchDogComponentTypes.Location, 100, WatchDogIssueTypes.RecordCount, "Details", null)
+                new WatchDogLogEvent(1, "Loc1", DateTime.Parse("2026-01-20T21:07:41Z"), WatchDogComponentTypes.Location, 100, WatchDogIssueTypes.RecordCount, "Details","1", null)
             };
             var includeErrorCounts = true;
             var includeConsecutive = true;
@@ -726,13 +744,13 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices.Tests
         {
             return new List<WatchDogLogEventWithCountAndDate>
             {
-                new WatchDogLogEventWithCountAndDate(1, "Loc1", DateTime.Parse("2026-01-20T21:07:41Z"), WatchDogComponentTypes.Location, 100, WatchDogIssueTypes.RecordCount, "Details", null)
+                new WatchDogLogEventWithCountAndDate(1, "Loc1", DateTime.Parse("2026-01-20T21:07:41Z"), WatchDogComponentTypes.Location, 100, WatchDogIssueTypes.RecordCount, "Details","1", null)
                 {
                     EventCount = 5,
                     ConsecutiveOccurenceCount = 3,
                     DateOfFirstInstance = new DateTime(2024, 1, 1)
                 },
-                new WatchDogLogEventWithCountAndDate(2, "Loc2", DateTime.UtcNow, WatchDogComponentTypes.Location, 101, WatchDogIssueTypes.RecordCount, "Details", null)
+                new WatchDogLogEventWithCountAndDate(2, "Loc2", DateTime.UtcNow, WatchDogComponentTypes.Location, 101, WatchDogIssueTypes.RecordCount, "Details","1", null)
                 {
                     EventCount = 10,
                     ConsecutiveOccurenceCount = 5,
@@ -745,7 +763,7 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices.Tests
         {
             return new List<WatchDogLogEventWithCountAndDate>
             {
-                new WatchDogLogEventWithCountAndDate(1, "Loc1", DateTime.UtcNow, WatchDogComponentTypes.Detector, 101, WatchDogIssueTypes.LowDetectorHits, "Details", 1)
+                new WatchDogLogEventWithCountAndDate(1, "Loc1", DateTime.UtcNow, WatchDogComponentTypes.Detector, 101, WatchDogIssueTypes.LowDetectorHits, "Details","1", 1)
                 {
                     EventCount = 5,
                     ConsecutiveOccurenceCount = 3,
@@ -765,25 +783,25 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices.Tests
                 PmScanDate = DateTime.Today
             };
 
-            var users = new List<ApplicationUser>
+            var recipients = new List<WatchdogEmailRecipient>
             {
-                new ApplicationUser { Id = "1", Email = "admin@test.com" }
+                new WatchdogEmailRecipient { UserId = "1", Email = "admin@test.com", IsAdmin = true, IsWatchdogSubscriber = true }
             };
 
             var emailServiceMock = new Mock<IEmailService>();
             emailServiceMock.Setup(m => m.SendEmailAsync(It.IsAny<MailMessage>()))
                             .ReturnsAsync(true);
 
-            var service = new WatchdogEmailService(_loggerMock.Object, emailServiceMock.Object);
+            var service = new WatchdogEmailService(_loggerMock.Object, emailServiceMock.Object, _weekdayClock);
 
             // Act
             await service.SendAllEmails(
                 options,
                 new(), new(), new(),
-                new(), users,
-                new(), new(),
-                new(), new(),
-                new(), new(),
+                new(), recipients,
+                new(),
+                new(),
+                new(),
                 new());
 
             // Assert
@@ -813,10 +831,10 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices.Tests
                 options,
                 new(), new(), new(),      // newErrors, dailyRecurringErrors, recurringErrors
                 new(),                     // Locations
-                new(),                     // Users
-                new(), new(),              // Jurisdictions, UserJurisdictions
-                new(), new(),              // Areas, UserAreas
-                new(), new(),              // Regions, UserRegions
+                new(),                     // Recipients
+                new(),                     // Jurisdictions
+                new(),                     // Areas
+                new(),                     // Regions
                 new()                      // Logs from previous day
             );
 
@@ -825,6 +843,171 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices.Tests
                 m.SendEmailAsync(It.IsAny<MailMessage>()),
                 Times.Never
             );
+        }
+
+        [Fact]
+        public async Task SendAllEmails_ShouldSendDelivery_WhenWeekdayOnlyAndWeekend()
+        {
+            var options = new WatchdogEmailOptions
+            {
+                WeekdayOnly = true,
+                EmailPmErrors = true,
+                DefaultEmailAddress = "from@test.com",
+                PmScanDate = new DateTime(2026, 4, 25)
+            };
+
+            var recipients = new List<WatchdogEmailRecipient>
+            {
+                new WatchdogEmailRecipient
+                {
+                    UserId = "1",
+                    Email = "admin@test.com",
+                    IsAdmin = true,
+                    IsWatchdogSubscriber = true
+                }
+            };
+
+            var emailServiceMock = new Mock<IEmailService>();
+            emailServiceMock.Setup(m => m.SendEmailAsync(It.IsAny<MailMessage>()))
+                .ReturnsAsync(true);
+
+            var service = new WatchdogEmailService(_loggerMock.Object, emailServiceMock.Object, _weekdayClock);
+
+            await service.SendAllEmails(
+                options,
+                new(),
+                new(),
+                new(),
+                new List<Location> { new Location { Id = 1, LocationIdentifier = "Loc1", RegionId = 1, JurisdictionId = 1, Areas = new List<Area>() } },
+                recipients,
+                new List<Jurisdiction> { new Jurisdiction { Id = 1, Name = "Jurisdiction 1" } },
+                new List<Area> { new Area { Id = 1, Name = "Area 1" } },
+                new List<Region> { new Region { Id = 1, Description = "Region 1" } },
+                new());
+
+            emailServiceMock.Verify(m => m.SendEmailAsync(It.IsAny<MailMessage>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task SendAllEmails_ShouldSendDelivery_WhenWeekdayOnlyAndWeekday()
+        {
+            var options = new WatchdogEmailOptions
+            {
+                WeekdayOnly = true,
+                EmailPmErrors = true,
+                DefaultEmailAddress = "from@test.com",
+                PmScanDate = new DateTime(2026, 4, 24)
+            };
+
+            var recipients = new List<WatchdogEmailRecipient>
+            {
+                new WatchdogEmailRecipient
+                {
+                    UserId = "1",
+                    Email = "admin@test.com",
+                    IsAdmin = true,
+                    IsWatchdogSubscriber = true
+                }
+            };
+
+            var emailServiceMock = new Mock<IEmailService>();
+            emailServiceMock.Setup(m => m.SendEmailAsync(It.IsAny<MailMessage>()))
+                .ReturnsAsync(true);
+
+            var service = new WatchdogEmailService(_loggerMock.Object, emailServiceMock.Object, _weekdayClock);
+
+            await service.SendAllEmails(
+                options,
+                new(),
+                new(),
+                new(),
+                new List<Location> { new Location { Id = 1, LocationIdentifier = "Loc1", RegionId = 1, JurisdictionId = 1, Areas = new List<Area>() } },
+                recipients,
+                new List<Jurisdiction> { new Jurisdiction { Id = 1, Name = "Jurisdiction 1" } },
+                new List<Area> { new Area { Id = 1, Name = "Area 1" } },
+                new List<Region> { new Region { Id = 1, Description = "Region 1" } },
+                new());
+
+            emailServiceMock.Verify(m => m.SendEmailAsync(It.IsAny<MailMessage>()), Times.Once);
+        }
+
+        [Fact]
+        public async Task SendAllEmails_ShouldSendRampEmail_WhenWeekdayOnlyAndWeekday()
+        {
+            var options = new WatchdogEmailOptions
+            {
+                WeekdayOnly = true,
+                EmailRampErrors = true,
+                DefaultEmailAddress = "from@test.com",
+                RampMissedDetectorHitsStartScanDate = new DateTime(2026, 4, 24)
+            };
+
+            var recipient = new WatchdogEmailRecipient
+            {
+                UserId = "1",
+                Email = "ramp@test.com",
+                JurisdictionIds = new List<int> { 1 }
+            };
+
+            var emailServiceMock = new Mock<IEmailService>();
+            emailServiceMock.Setup(m => m.SendEmailAsync(It.IsAny<MailMessage>()))
+                .ReturnsAsync(true);
+
+            var service = new WatchdogEmailService(_loggerMock.Object, emailServiceMock.Object, _weekdayClock);
+
+            await service.SendAllEmails(
+                options,
+                new(),
+                new(),
+                new(),
+                new List<Location> { new Location { JurisdictionId = 1 } },
+                new List<WatchdogEmailRecipient> { recipient },
+                new List<Jurisdiction> { new Jurisdiction { Id = 1, Name = "I-15 Ramp" } },
+                new(),
+                new(),
+                new());
+
+            emailServiceMock.Verify(m =>
+                m.SendEmailAsync(It.Is<MailMessage>(msg =>
+                    msg.From.Address == "from@test.com" &&
+                    msg.Subject.Contains("Ramp") &&
+                    msg.To.Cast<MailAddress>().Any(to => to.Address == "ramp@test.com")
+                )),
+                Times.Once);
+        }
+
+        [Fact]
+        public async Task SendAllEmails_ShouldSkipRampDelivery_WhenWeekdayOnlyAndWeekend()
+        {
+            var service = new WatchdogEmailService(_loggerMock.Object, _emailServiceMock.Object, _weekdayClock);
+            var options = new WatchdogEmailOptions
+            {
+                WeekdayOnly = true,
+                EmailRampErrors = true,
+                DefaultEmailAddress = "from@test.com",
+                RampMissedDetectorHitsStartScanDate = new DateTime(2026, 4, 25)
+            };
+
+            var recipient = new WatchdogEmailRecipient
+            {
+                UserId = "1",
+                Email = "ramp@test.com",
+                JurisdictionIds = new List<int> { 1 }
+            };
+
+            await service.SendAllEmails(
+                options,
+                new(),
+                new(),
+                new(),
+                new List<Location> { new Location { JurisdictionId = 1 } },
+                new List<WatchdogEmailRecipient> { recipient },
+                new List<Jurisdiction> { new Jurisdiction { Id = 1, Name = "I-15 Ramp" } },
+                new(),
+                new(),
+                new());
+
+            _emailServiceMock.Verify(m => m.SendEmailAsync(It.IsAny<MailMessage>()), Times.Never);
         }
 
 
@@ -840,18 +1023,17 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices.Tests
             };
 
             var jurisdiction = new Jurisdiction { Id = 1, Name = "I-15 Ramp" };
-            var user = new ApplicationUser { Id = "1", Email = "ramp@test.com" };
+            var recipient = new WatchdogEmailRecipient { UserId = "1", Email = "ramp@test.com", JurisdictionIds = new List<int> { 1 } };
 
             // Act
             await _watchdogEmailService.SendAllEmails(
                 options,
                 new(), new(), new(), // newErrors, dailyRecurringErrors, recurringErrors
                 new List<Location> { new Location { JurisdictionId = 1 } },
-                new List<ApplicationUser> { user },
+                new List<WatchdogEmailRecipient> { recipient },
                 new List<Jurisdiction> { jurisdiction },
-                new List<UserJurisdiction> { new UserJurisdiction { JurisdictionId = 1, UserId = "1" } },
-                new(), new(), // Areas, UserAreas
-                new(), new(), // Regions, UserRegions
+                new(),
+                new(),
                 new()         // Logs from previous day
             );
 
@@ -922,7 +1104,7 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices.Tests
                 new List<WatchDogLogEventWithCountAndDate>
                 {
             new WatchDogLogEventWithCountAndDate(1, "Loc", DateTime.UtcNow,
-                WatchDogComponentTypes.Location, 1, WatchDogIssueTypes.RecordCount, "Details", null)
+                WatchDogComponentTypes.Location, 1, WatchDogIssueTypes.RecordCount, "Details","1", null)
                 },
                 options,
                 new List<Location> { new Location { Id = 1 } },
@@ -949,7 +1131,7 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices.Tests
                 new List<WatchDogLogEventWithCountAndDate>
                 {
             new WatchDogLogEventWithCountAndDate(1, "Loc", DateTime.UtcNow,
-                WatchDogComponentTypes.Location, 1, WatchDogIssueTypes.RampMissedDetectorHits, "Details", null)
+                WatchDogComponentTypes.Location, 1, WatchDogIssueTypes.RampMissedDetectorHits, "Details","1", null)
                 },
                 options,
                 new List<Location> { new Location { Id = 1 } },
@@ -970,7 +1152,7 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices.Tests
                 new List<WatchDogLogEventWithCountAndDate>
                 {
             new WatchDogLogEventWithCountAndDate(99, "LocX", DateTime.UtcNow,
-                WatchDogComponentTypes.Location, 1, WatchDogIssueTypes.RecordCount, "Details", null)
+                WatchDogComponentTypes.Location, 1, WatchDogIssueTypes.RecordCount, "Details","1", null)
                 },
                 true,
                 new(),
@@ -987,7 +1169,7 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices.Tests
             var issues = new List<WatchDogLogEventWithCountAndDate>
     {
         new WatchDogLogEventWithCountAndDate(1, "Loc1", DateTime.UtcNow,
-            WatchDogComponentTypes.Location, 1, WatchDogIssueTypes.RecordCount, "Details", 0)
+            WatchDogComponentTypes.Location, 1, WatchDogIssueTypes.RecordCount, "Details","1", 0)
     };
 
             var result = _watchdogEmailService.GetMessage(
@@ -1014,9 +1196,9 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices.Tests
                 DefaultEmailAddress = "from@test.com"
             };
 
-            var users = new List<ApplicationUser>
+            var recipients = new List<WatchdogEmailRecipient>
     {
-        new ApplicationUser { Id = "1", Email = "admin@test.com" }
+        new WatchdogEmailRecipient { UserId = "1", Email = "admin@test.com", IsAdmin = true, IsWatchdogSubscriber = true }
     };
 
             // Act
@@ -1024,10 +1206,10 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices.Tests
                 options,
                 new(), new(), new(), // newErrors, dailyRecurringErrors, recurringErrors
                 new(),                // Locations
-                users,                // Users
-                new(), new(),         // Jurisdictions, UserJurisdictions
-                new(), new(),         // Areas, UserAreas
-                new(), new(),         // Regions, UserRegions
+                recipients,           // Recipients
+                new(),                // Jurisdictions
+                new(),                // Areas
+                new(),                // Regions
                 new()                 // Logs from previous day
             );
 
@@ -1059,9 +1241,9 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices.Tests
                 DefaultEmailAddress = "from@test.com"
             };
 
-            var users = new List<ApplicationUser>
+            var recipients = new List<WatchdogEmailRecipient>
             {
-                new ApplicationUser { Id = "1", Email = "admin@test.com" }
+                new WatchdogEmailRecipient { UserId = "1", Email = "admin@test.com", IsAdmin = true, IsWatchdogSubscriber = true }
             };
 
             // Act
@@ -1069,10 +1251,10 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices.Tests
                 options,
                 new(), new(), new(), // newErrors, dailyRecurringErrors, recurringErrors
                 new(),                // Locations
-                users,                // Users
-                new(), new(),         // Jurisdictions, UserJurisdictions
-                new(), new(),         // Areas, UserAreas
-                new(), new(),         // Regions, UserRegions
+                recipients,           // Recipients
+                new(),                // Jurisdictions
+                new(),                // Areas
+                new(),                // Regions
                 new()                 // Logs from previous day
             );
 
@@ -1124,7 +1306,7 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices.Tests
             var rampError = new WatchDogLogEventWithCountAndDate(
                 1, "Loc1", DateTime.Parse("2026-01-20T21:07:41Z"),
                 WatchDogComponentTypes.Location, 100,
-                WatchDogIssueTypes.RampMissedDetectorHits, "Ramp error details", null)
+                WatchDogIssueTypes.RampMissedDetectorHits, "Ramp error details", "1", null)
             {
                 EventCount = 5,
                 ConsecutiveOccurenceCount = 3,
@@ -1169,7 +1351,7 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices.Tests
             var pmError = new WatchDogLogEventWithCountAndDate(
                 1, "Loc1", DateTime.Parse("2026-01-20T21:07:41Z"),
                 WatchDogComponentTypes.Location, 100,
-                WatchDogIssueTypes.RecordCount, "PM error details", null)
+                WatchDogIssueTypes.RecordCount, "PM error details", "1", null)
             {
                 EventCount = 5,
                 ConsecutiveOccurenceCount = 3,
@@ -1213,7 +1395,7 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices.Tests
             var amError = new WatchDogLogEventWithCountAndDate(
                 1, "Loc1", DateTime.Parse("2026-01-20T21:07:41Z"),
                 WatchDogComponentTypes.Location, 100,
-                WatchDogIssueTypes.ForceOffThreshold, "AM error details", null)
+                WatchDogIssueTypes.ForceOffThreshold, "AM error details", "1", null)
             {
                 EventCount = 5,
                 ConsecutiveOccurenceCount = 3,
@@ -1238,7 +1420,41 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices.Tests
             Assert.DoesNotContain("PM", result);
         }
 
+        private sealed class FixedTimeProvider : TimeProvider
+        {
+            private readonly DateTimeOffset _utcNow;
 
+            public FixedTimeProvider(DateTimeOffset utcNow)
+            {
+                _utcNow = utcNow;
+            }
+
+            public override DateTimeOffset GetUtcNow() => _utcNow;
+
+            public override TimeZoneInfo LocalTimeZone => TimeZoneInfo.Utc;
+
+            public override long GetTimestamp() => 0;
+
+            public override ITimer CreateTimer(TimerCallback callback, object? state, TimeSpan dueTime, TimeSpan period)
+            {
+                return new NoOpTimer();
+            }
+
+            private sealed class NoOpTimer : ITimer
+            {
+                public bool Change(TimeSpan dueTime, TimeSpan period) => true;
+
+                public void Dispose()
+                {
+                }
+
+                public ValueTask DisposeAsync()
+                {
+                    Dispose();
+                    return ValueTask.CompletedTask;
+                }
+            }
+        }
 
     }
 }

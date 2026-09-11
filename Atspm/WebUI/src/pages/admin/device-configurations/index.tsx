@@ -18,17 +18,15 @@ import {
   useViewPage,
 } from '@/features/identity/pagesCheck'
 import { useNotificationStore } from '@/stores/notifications'
-import { toUTCDateStamp } from '@/utils/dateTime'
+import { formatInstantAsLocalDate } from '@/utils/dateTime'
 import { removeAuditFields } from '@/utils/removeAuditFields'
 import { Backdrop, CircularProgress } from '@mui/material'
 
 const DevicesAdmin = () => {
   const pageAccess = useViewPage(PageNames.DeviceConfigurations)
   const { addNotification } = useNotificationStore()
-  const hasLocationsEditClaim = useUserHasClaim('LocationConfiguration:Edit')
-  const hasLocationsDeleteClaim = useUserHasClaim(
-    'LocationConfiguration:Delete'
-  )
+  const hasDeviceEditClaim = useUserHasClaim('Device:Edit')
+  const hasDeviceDeleteClaim = useUserHasClaim('Device:Delete')
 
   const { mutateAsync: createMutation } = usePostDeviceConfiguration()
   const { mutateAsync: deleteMutation } = useDeleteDeviceConfigurationFromKey()
@@ -122,8 +120,6 @@ const DevicesAdmin = () => {
     //do something?? potentially just delete
   }
 
-  const handleDeleteModalClose = () => undefined
-
   if (isLoading) {
     return (
       <Backdrop open>
@@ -155,8 +151,8 @@ const DevicesAdmin = () => {
       ...obj,
       name: obj.product?.manufacturer + ' ' + obj.product?.model || '',
       productName: productName,
-      created: obj.created ? toUTCDateStamp(obj.created) : '',
-      modified: obj.modified ? toUTCDateStamp(obj.modified) : '',
+      created: formatInstantAsLocalDate(obj.created),
+      modified: formatInstantAsLocalDate(obj.modified),
     }
   })
 
@@ -182,8 +178,8 @@ const DevicesAdmin = () => {
         pageName="Device Configuration"
         cells={cells}
         data={filteredData}
-        hasEditPrivileges={hasLocationsEditClaim}
-        hasDeletePrivileges={hasLocationsDeleteClaim}
+        hasEditPrivileges={hasDeviceEditClaim}
+        hasDeletePrivileges={hasDeviceDeleteClaim}
         editModal={
           <DeviceConfigModal
             isOpen={true}
@@ -192,11 +188,13 @@ const DevicesAdmin = () => {
           />
         }
         createModal={
-          <DeviceConfigModal
-            isOpen={true}
-            onSave={handleCreateDeviceConfiguration}
-            onClose={onModalClose}
-          />
+          hasDeviceEditClaim ? (
+            <DeviceConfigModal
+              isOpen={true}
+              onSave={handleCreateDeviceConfiguration}
+              onClose={onModalClose}
+            />
+          ) : undefined
         }
         deleteModal={
           <DeleteModal
@@ -207,7 +205,7 @@ const DevicesAdmin = () => {
             }
             objectType="Device Configuration"
             open={false}
-            onClose={handleDeleteModalClose}
+            onClose={onModalClose}
             onConfirm={HandleDeleteDevice}
             associatedObjects={devices}
             associatedObjectsLabel="devices and locations"

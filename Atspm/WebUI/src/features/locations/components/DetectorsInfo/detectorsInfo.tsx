@@ -1,8 +1,8 @@
 import { useGetDetectionType, useGetLocationType } from '@/api/config'
 import DetectionTypesCell from '@/features/locations/components/editDetector/DetectionTypesCell'
-import { hardwareTypeOptions } from '@/features/locations/components/editDetector/HardwareTypeCell'
 import { laneTypeOptions } from '@/features/locations/components/editDetector/LaneTypeCell'
 import { movementTypeOptions } from '@/features/locations/components/editDetector/MovementTypeCell'
+import { hardwareTypes } from '@/features/locations/components/editDetector/selectOptions'
 import { LocationExpanded } from '@/features/locations/types'
 import CheckBoxIcon from '@mui/icons-material/CheckBox'
 import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank'
@@ -67,7 +67,7 @@ function DetectorsInfo({ location }: DetectorsInfoProps) {
     const all = detectionRes.data.value as any[]
     if (locationType.name === 'Intersection') {
       return all.filter((d) =>
-        ['AC', 'AS', 'LLC', 'LLS', 'SBP', 'AP'].includes(d.abbreviation)
+        ['AC', 'AS', 'LLC', 'LLS', 'SBP', 'AP', 'PP'].includes(d.abbreviation)
       )
     }
     if (locationType.name === 'Ramp') {
@@ -187,10 +187,8 @@ function DetectorsInfo({ location }: DetectorsInfoProps) {
       minWidth: 170,
       renderCell: (params) => (
         <Box display="grid" alignItems="center">
-          {
-            hardwareTypeOptions.find((opt) => opt.id === params.value)
-              ?.description
-          }
+          {hardwareTypes.find((opt) => opt.id === params.value)?.description ??
+            params.value}
         </Box>
       ),
     },

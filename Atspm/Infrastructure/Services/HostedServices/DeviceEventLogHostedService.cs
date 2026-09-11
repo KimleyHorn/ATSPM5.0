@@ -15,7 +15,7 @@
 // limitations under the License.
 #endregion
 
-using Lextm.SharpSnmpLib.Messaging;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -44,43 +44,48 @@ namespace Utah.Udot.Atspm.Infrastructure.Services.HostedServices
         public override async Task Process(IServiceScope scope, Stopwatch stopwatch, CancellationToken cancellationToken = default)
         {
             var repo = scope.ServiceProvider.GetService<IDeviceRepository>();
+            var scopeFactory = scope.ServiceProvider.GetService<IServiceScopeFactory>();
 
-            var workflow = new DeviceEventLogWorkflow(scope.ServiceProvider.GetService<IServiceScopeFactory>(), _options.Value.BatchSize, _options.Value.ParallelProcesses, cancellationToken);
-            // ServiceObjectBase only calls BeginInit() when initialize:true is passed to its constructor.
-            // WorkflowBase does not pass initialize:true, so we must call BeginInit() explicitly here
-            // to trigger Initialize() in the background, then wait for the Initialized event.
-            workflow.BeginInit();
-            await WaitForInitializedAsync(workflow, cancellationToken);
-
-            if (workflow.Input == null)
-                throw new InvalidOperationException("DeviceEventLogWorkflow.Input is null after construction — WorkflowBase.Initialize() did not run.");
-
-            bool anyCsvDevices = false;
-
-            await foreach (var d in repo.GetDevicesForLogging(_options.Value.DeviceEventLoggingQueryOptions))
+            var devices = new List<Device>();
+            await foreach (var device in repo.GetDevicesForLogging(_options.Value.DeviceEventLoggingQueryOptions).WithCancellation(cancellationToken))
             {
-                if (d.DeviceConfiguration?.Protocol == TransportProtocols.Csv)
-                {
-                    anyCsvDevices = true;
-                }
-                else
-                {
-                    if (workflow.Input == null)
-                        throw new InvalidOperationException($"DeviceEventLogWorkflow.Input became null during enumeration while processing device {d.DeviceIdentifier}.");
-
-                    await workflow.Input.SendAsync(d);
-                }
+                devices.Add(device);
             }
 
-            workflow.Input.Complete();
+            var nonCsvDevices = devices
+                .Where(device => device.DeviceConfiguration?.Protocol != TransportProtocols.Csv)
+                .ToList();
+            var hasCsvDevices = devices.Any(device => device.DeviceConfiguration?.Protocol == TransportProtocols.Csv);
 
-            await Task.WhenAll(workflow.Steps.Select(s => s.Completion));
+            var targetInstances = Math.Max(1, _options.Value.WorkflowBatchSize);
+            int devicesPerWorkflow;
 
-            if (anyCsvDevices)
+            if (_options.Value.DevicesBatchSize > 0)
             {
-                var csvWorkflow = new DecodeEventLogWorkflow(scope.ServiceProvider.GetService<IServiceScopeFactory>(), _options.Value.BatchSize > 0 ? _options.Value.BatchSize : 50000, cancellationToken);
-                csvWorkflow.BeginInit();
-                await WaitForInitializedAsync(csvWorkflow, cancellationToken);
+                devicesPerWorkflow = _options.Value.DevicesBatchSize.Value;
+            }
+            else
+            {
+                devicesPerWorkflow = Math.Max(1, (int)Math.Ceiling((double)nonCsvDevices.Count / targetInstances));
+            }
+
+            Func<DeviceEventLogWorkflow> workflowFactory = () =>
+                new DeviceEventLogWorkflow(
+                    scopeFactory,
+                    _options.Value.ProcessingBatchSize,
+                    _options.Value.ParallelProcesses,
+                    cancellationToken
+                );
+
+            if (nonCsvDevices.Count > 0)
+            {
+                await workflowFactory.BatchRunAsync(ToAsyncEnumerable(nonCsvDevices, cancellationToken), devicesPerWorkflow, targetInstances, cancellationToken);
+            }
+
+            if (hasCsvDevices)
+            {
+                var csvWorkflow = new DecodeEventLogWorkflow(scopeFactory, _options.Value.ProcessingBatchSize, cancellationToken);
+                await csvWorkflow.Initialize();
                 await ProcessCsvDevices(scope, repo, csvWorkflow, cancellationToken);
             }
         }
@@ -215,6 +220,16 @@ namespace Utah.Udot.Atspm.Infrastructure.Services.HostedServices
             catch
             {
                 return null;
+            }
+        }
+
+        private static async IAsyncEnumerable<Device> ToAsyncEnumerable(IEnumerable<Device> devices, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            foreach (var device in devices)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                yield return device;
+                await Task.Yield();
             }
         }
     }

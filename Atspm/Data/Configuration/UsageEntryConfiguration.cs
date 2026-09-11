@@ -29,10 +29,8 @@ namespace Utah.Udot.Atspm.Data.Configuration
         /// <inheritdoc/>
         public void Configure(EntityTypeBuilder<UsageEntry> builder)
         {
-            // Primary key
             builder.HasKey(x => x.Id);
 
-            // Required properties
             builder.Property(x => x.Timestamp)
                 .IsRequired();
 
@@ -45,7 +43,6 @@ namespace Utah.Udot.Atspm.Data.Configuration
             builder.Property(x => x.Success)
                 .IsRequired();
 
-            // Strings with sensible max lengths
             builder.Property(x => x.ApiName)
                .HasMaxLength(32);
 
@@ -56,7 +53,7 @@ namespace Utah.Udot.Atspm.Data.Configuration
                 .HasMaxLength(100);
 
             builder.Property(x => x.RemoteIp)
-                .HasMaxLength(45); // IPv6 max length
+                .HasMaxLength(45);
 
             builder.Property(x => x.UserAgent)
                 .HasMaxLength(1024);
@@ -82,7 +79,6 @@ namespace Utah.Udot.Atspm.Data.Configuration
             builder.Property(x => x.ErrorMessage)
                 .HasMaxLength(2000);
 
-            // Nullable properties
             builder.Property(x => x.ResultCount)
                 .IsRequired(false);
 
@@ -92,12 +88,10 @@ namespace Utah.Udot.Atspm.Data.Configuration
             builder.Property(x => x.ErrorMessage)
                 .IsRequired(false);
 
-            // Indexes for common queries
             builder.HasIndex(x => x.Timestamp);
             builder.HasIndex(x => x.UserId);
             builder.HasIndex(x => x.Route);
             builder.HasIndex(x => x.StatusCode);
         }
     }
-
 }

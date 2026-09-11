@@ -50,6 +50,12 @@ namespace Utah.Udot.Atspm.Data.Enums
         /// <summary>
         /// Reads CSV files from a local directory
         /// </summary>
-        Csv
+        Csv,
+
+        /// <summary>
+        /// Supports MQTT Protocol
+        ///     
+        /// </summary>
+        Mqtt
     }
 }

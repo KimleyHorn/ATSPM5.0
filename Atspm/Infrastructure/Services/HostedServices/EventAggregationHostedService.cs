@@ -32,6 +32,8 @@ namespace Utah.Udot.Atspm.Infrastructure.Services.HostedServices
         /// <inheritdoc/>
         public override async Task Process(IServiceScope scope, Stopwatch stopwatch = null, CancellationToken cancellationToken = default)
         {
+            scope.ServiceProvider.PrintHostInformation();
+
             Console.WriteLine($"{_options.Value}");
             Console.WriteLine($"{_options.Value.EventAggregationQueryOptions}");
 
@@ -41,7 +43,9 @@ namespace Utah.Udot.Atspm.Infrastructure.Services.HostedServices
 
                 var workflow = new AggregationWorkflow(scope.ServiceProvider.GetService<IServiceScopeFactory>(), tl, _options.Value.ParallelProcesses, cancellationToken);
 
-                await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                //await Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+
+                await workflow.Initialize();
 
                 var result = new ActionBlock<CompressedAggregationBase>(a => Console.WriteLine($"output: {a}"));
                 workflow.Output.LinkTo(result, new DataflowLinkOptions() { PropagateCompletion = true });
@@ -58,7 +62,8 @@ namespace Utah.Udot.Atspm.Infrastructure.Services.HostedServices
 
                 workflow.Input.Complete();
 
-                await Task.WhenAll(workflow.Steps.Select(s => s.Completion));
+                //await Task.WhenAll(workflow.Steps.Select(s => s.Completion));
+
                 await workflow.Output.Completion;
                 await result.Completion;
             }

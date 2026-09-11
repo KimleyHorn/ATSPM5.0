@@ -21,10 +21,12 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
 using Microsoft.AspNetCore.OData.Deltas;
 using Utah.Udot.Atspm.Business.Watchdog;
+using Utah.Udot.Atspm.Common;
 using Utah.Udot.Atspm.ConfigApi.Models;
 using Utah.Udot.Atspm.Data.Enums;
 using Utah.Udot.Atspm.Data.Models;
 using Utah.Udot.Atspm.Extensions;
+using Utah.Udot.Atspm.Infrastructure.Attributes;
 using Utah.Udot.Atspm.Infrastructure.Services;
 using Utah.Udot.Atspm.Repositories.ConfigurationRepositories;
 using Utah.Udot.Atspm.Specifications;
@@ -171,7 +173,7 @@ namespace Utah.Udot.Atspm.ConfigApi.Controllers
         /// <param name="newVersionLabel">Label of new version</param>
         /// <returns>New version of copied <see cref="Location"/></returns>
         /// 
-        [Authorize(Policy = "CanEditLocationConfigurations")]
+        [AuthorizePermission(AtspmAuthorization.Permissions.LocationConfigurationsEdit)]
         [HttpPost]
         [ProducesResponseType(typeof(Location), Status200OK)]
         [ProducesResponseType(StatusCodes.Status404NotFound)]
@@ -195,7 +197,7 @@ namespace Utah.Udot.Atspm.ConfigApi.Controllers
         /// <param name="key">Key of <see cref="Location"/> to mark as deleted</param>
         /// <returns></returns>
         /// 
-        [Authorize(Policy = "CanDeleteLocationConfigurations")]
+        [AuthorizePermission(AtspmAuthorization.Permissions.LocationConfigurationsDelete)]
         [HttpPost]
         [ProducesResponseType(Status200OK)]
         [ProducesResponseType(Status404NotFound)]
@@ -219,7 +221,7 @@ namespace Utah.Udot.Atspm.ConfigApi.Controllers
         /// <param name="key">Identifier of <see cref="Location"/> to mark as deleted</param>
         /// <returns></returns>
         /// 
-        [Authorize(Policy = "CanDeleteLocationConfigurations")]
+        [AuthorizePermission(AtspmAuthorization.Permissions.LocationConfigurationsDelete)]
         [HttpPost("/api/v1/Location/{key}/DeleteAllVersions")]
         [ProducesResponseType(Status200OK)]
         [ProducesResponseType(Status404NotFound)]
@@ -361,7 +363,7 @@ namespace Utah.Udot.Atspm.ConfigApi.Controllers
         [ProducesResponseType(Status400BadRequest)]
         public IActionResult GetLocationsForSearch([FromQuery] int? areaId, [FromQuery] int? regionId, [FromQuery] int? jurisdictionId, [FromQuery] int? metricTypeId)
         {
-            var basicCharts = new List<int> { 1, 2, 3, 4, 14, 15, 17, 31 };
+            var basicCharts = new List<int> { 1, 2, 3, 4, 14, 15, 17, 31, 39 };
             var result = _repository.GetList()
                 .FromSpecification(new ActiveLocationSpecification())
                 .Where(w => (jurisdictionId != null) ? w.JurisdictionId == jurisdictionId : true)

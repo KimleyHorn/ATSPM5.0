@@ -15,7 +15,7 @@ import {
   useViewPage,
 } from '@/features/identity/pagesCheck'
 import { useNotificationStore } from '@/stores/notifications'
-import { toUTCDateStamp } from '@/utils/dateTime'
+import { formatInstantAsLocalDate } from '@/utils/dateTime'
 import ExpandLessIcon from '@mui/icons-material/ExpandLess'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import { Backdrop, Box, Button, CircularProgress } from '@mui/material'
@@ -80,8 +80,6 @@ const FaqAdmin = () => {
     //do something?? potentially just delete
   }
 
-  const handleDeleteModalClose = () => undefined
-
   if (isLoading) {
     return (
       <Backdrop open>
@@ -97,8 +95,8 @@ const FaqAdmin = () => {
   const filteredData = faqs.map((obj: Faq) => {
     return {
       ...obj,
-      created: obj.created ? toUTCDateStamp(obj.created) : undefined,
-      modified: obj.modified ? toUTCDateStamp(obj.modified) : undefined,
+      created: formatInstantAsLocalDate(obj.created),
+      modified: formatInstantAsLocalDate(obj.modified),
     }
   })
 
@@ -175,7 +173,7 @@ const FaqAdmin = () => {
             objectType="Faqs"
             deleteLabel={(selectedRow: Faq) => selectedRow.header}
             open={false}
-            onClose={handleDeleteModalClose}
+            onClose={onModalClose}
             onConfirm={HandleDeleteFaq}
           />
         }

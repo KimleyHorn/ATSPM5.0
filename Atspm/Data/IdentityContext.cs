@@ -17,22 +17,49 @@
 
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Utah.Udot.Atspm.Data.Configuration.IdentityConfiguration;
+using Utah.Udot.Atspm.Data.Models.IdentityModels;
+using Utah.Udot.Atspm.Data.Utility;
 
 namespace Utah.Udot.Atspm.Data
 {
     /// <summary>
-    /// Identity database context
+    /// The database context for the application's identity system, 
+    /// extending <see cref="IdentityDbContext{TUser}"/> to include API key management.
     /// </summary>
     public class IdentityContext : IdentityDbContext<ApplicationUser>
     {
-        /// <summary>
-        /// Identity database context
-        /// </summary>
-        /// <param name="options"></param>
-        public IdentityContext(DbContextOptions<IdentityContext> options)
-            : base(options)
-        {
+        /// <inheritdoc/>
+        public IdentityContext() { }
 
+        /// <inheritdoc/>
+        public IdentityContext(DbContextOptions<IdentityContext> options) : base(options) { }
+
+        /// <summary>
+        /// Gets or sets the <see cref="DbSet{TEntity}"/> for managing API keys.
+        /// </summary>
+        public DbSet<ApiKey> ApiKeys { get; set; }
+
+        /// <summary>
+        /// Gets or sets the <see cref="DbSet{TEntity}"/> for managing API key claims.
+        /// </summary>
+        public DbSet<ApiKeyClaim> ApiKeyClaims { get; set; }
+
+        /// <inheritdoc/>
+        protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+        {
+            configurationBuilder.ApplyDateTimeOffsetConverters();
+            configurationBuilder.ApplyProviderDateTimeTypes(Database.ProviderName);
+        }
+
+        /// <inheritdoc/>
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            modelBuilder.ApplyConfiguration(new ApiKeyConfiguration());
+            modelBuilder.ApplyConfiguration(new ApiKeyClaimConfiguration());
+            //TODO: Add ApplicationUser configuration
+
+            base.OnModelCreating(modelBuilder);
         }
     }
 }

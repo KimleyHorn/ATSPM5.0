@@ -33,32 +33,32 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices
         public (List<WatchDogLogEventWithCountAndDate> newIssues, List<WatchDogLogEventWithCountAndDate> dailyRecurringIssues, List<WatchDogLogEventWithCountAndDate> recurringIssues)
         GetSegmentedErrors(List<WatchDogLogEvent> recordsForScanDate, bool weekdayOnly, string sort, DateTime scanDate)
         {
-            var (recordsForLast12Months, recordsForDayBeforeScanDate) = FetchRecords(weekdayOnly, scanDate);
-            var countAndDateLookupForLast12Months = CreateCountAndDateLookup(recordsForLast12Months, scanDate.AddDays(-1));
+            var previousDate = GetPreviousDate(weekdayOnly, scanDate);
+            var (recordsForLast12Months, _) = FetchRecords(previousDate);
+            var countAndDateLookupForLast12Months = CreateCountAndDateLookup(recordsForLast12Months, previousDate);
             var allConvertedRecords = ConvertRecords(recordsForScanDate, countAndDateLookupForLast12Months);
 
             return CategorizeIssues(allConvertedRecords, sort);
         }
 
         private (List<WatchDogLogEvent> recordsForLast12Months, List<WatchDogLogEvent> recordsForDayBeforeScanDate)
-        FetchRecords(bool weekdayOnly, DateTime scanDate)
+        FetchRecords(DateTime previousDate)
+        {
+            var recordsForDayBeforeScanDate = watchDogLogEventRepository.GetList(w => w.Timestamp >= previousDate &&
+                                w.Timestamp < previousDate.AddDays(1)).ToList();
+            var recordsForLast12Months = watchDogLogEventRepository.GetList(w => w.Timestamp >= previousDate.AddMonths(-12) &&
+                w.Timestamp < previousDate.AddDays(1)).ToList();
+            return (recordsForLast12Months, recordsForDayBeforeScanDate);
+        }
+
+        private static DateTime GetPreviousDate(bool weekdayOnly, DateTime scanDate)
         {
             if (weekdayOnly && scanDate.DayOfWeek == DayOfWeek.Monday)
             {
-                var recordsForDayBeforeScanDate = watchDogLogEventRepository.GetList(w => w.Timestamp >= scanDate.AddDays(-3) &&
-                                    w.Timestamp < scanDate.AddDays(-2)).ToList();
-                var recordsForLast12Months = watchDogLogEventRepository.GetList(w => w.Timestamp >= scanDate.AddDays(-3).AddMonths(-12) &&
-                    w.Timestamp < scanDate.AddDays(-2)).ToList();
-                return (recordsForLast12Months, recordsForDayBeforeScanDate);
+                return scanDate.AddDays(-3);
             }
-            else
-            {
-                var recordsForDayBeforeScanDate = watchDogLogEventRepository.GetList(w => w.Timestamp >= scanDate.AddDays(-1) &&
-                                   w.Timestamp < scanDate).ToList();
-                var recordsForLast12Months = watchDogLogEventRepository.GetList(w => w.Timestamp >= scanDate.AddDays(-1).AddMonths(-12) &&
-                    w.Timestamp < scanDate).ToList();
-                return (recordsForLast12Months, recordsForDayBeforeScanDate);
-            }
+
+            return scanDate.AddDays(-1);
         }
 
         public static Dictionary<(string LocationIdentifier, WatchDogIssueTypes IssueType, WatchDogComponentTypes ComponentType, int? Phase), (int Count, DateTime DateOfFirstOccurrence, int ConsecutiveOccurrenceCount)>
@@ -119,7 +119,7 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices
         ConvertRecords(List<WatchDogLogEvent> recordsForScanDate, Dictionary<(string LocationIdentifier, WatchDogIssueTypes IssueType, WatchDogComponentTypes ComponentType, int? Phase), (int Count, DateTime DateOfFirstOccurrence, int ConsecutiveOccurrenceCount)> countAndDateLookupForLast12Months)
         {
             return recordsForScanDate
-                .Select(r => new WatchDogLogEventWithCountAndDate(r.LocationId, r.LocationIdentifier, r.Timestamp, r.ComponentType, r.ComponentId, r.IssueType, r.Details, r.Phase)
+                .Select(r => new WatchDogLogEventWithCountAndDate(r.LocationId, r.LocationIdentifier, r.Timestamp, r.ComponentType, r.ComponentId, r.IssueType, r.Details, r.Key, r.Phase)
                 {
                     EventCount = countAndDateLookupForLast12Months.TryGetValue((r.LocationIdentifier, r.IssueType, r.ComponentType, r.Phase), out var data) ? data.Count : 0,
                     DateOfFirstInstance = countAndDateLookupForLast12Months.TryGetValue((r.LocationIdentifier, r.IssueType, r.ComponentType, r.Phase), out data) ? data.DateOfFirstOccurrence : r.Timestamp,

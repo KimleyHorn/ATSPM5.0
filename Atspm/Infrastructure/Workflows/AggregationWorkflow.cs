@@ -56,6 +56,28 @@ namespace Utah.Udot.ATSPM.Infrastructure.Workflows
         public SaveArchivedAggregationsProcess SaveArchivedAggregationsProcess { get; private set; }
 
         /// <inheritdoc/>
+        public override async Task Initialize()
+        {
+            //Steps = new();
+            Input = new(null, blockOptions);
+            Output = new(blockOptions);
+
+            InstantiateSteps();
+
+            await Task.WhenAll(
+                AggregateDetectorEventCountWorkflow.WhenInitialized(),
+                AggregatePedestrianPhasesWorkflow.WhenInitialized(),
+                AggregatePhaseCyclesWorkflow.WhenInitialized(),
+                AggregatePhaseSplitMonitorWorkflow.WhenInitialized()
+            );
+
+
+            Steps.Add(Input);
+            AddStepsToTracker();
+            LinkSteps();
+        }
+
+        /// <inheritdoc/>
         protected override void AddStepsToTracker()
         {
             Steps.Add(RestorArchivedEventsProcess);
