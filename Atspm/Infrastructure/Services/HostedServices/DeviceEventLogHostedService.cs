@@ -46,10 +46,9 @@ namespace Utah.Udot.Atspm.Infrastructure.Services.HostedServices
             var repo = scope.ServiceProvider.GetService<IDeviceRepository>();
 
             var workflow = new DeviceEventLogWorkflow(scope.ServiceProvider.GetService<IServiceScopeFactory>(), _options.Value.BatchSize, _options.Value.ParallelProcesses, cancellationToken);
-            // ServiceObjectBase only calls BeginInit() when initialize:true is passed to its constructor.
-            // WorkflowBase does not pass initialize:true, so we must call BeginInit() explicitly here
-            // to trigger Initialize() in the background, then wait for the Initialized event.
-            workflow.BeginInit();
+            // WorkflowBase constructor already calls BeginInit(), which runs Initialize() in the background.
+            // Calling BeginInit() or Initialize() again races with it, causing LinkSteps() to run twice and
+            // the BroadcastBlock input to deliver each item twice. Just wait for the background initialization.
             await WaitForInitializedAsync(workflow, cancellationToken);
 
             if (workflow.Input == null)
@@ -78,22 +77,22 @@ namespace Utah.Udot.Atspm.Infrastructure.Services.HostedServices
 
             if (anyCsvDevices)
             {
-                var csvWorkflow = new DecodeEventLogWorkflow(scope.ServiceProvider.GetService<IServiceScopeFactory>(), _options.Value.BatchSize > 0 ? _options.Value.BatchSize : 50000, cancellationToken);
-                csvWorkflow.BeginInit();
-                await WaitForInitializedAsync(csvWorkflow, cancellationToken);
-                await ProcessCsvDevices(scope, repo, csvWorkflow, cancellationToken);
+                await ProcessCsvDevices(scope, repo, cancellationToken);
             }
         }
 
         /// <summary>
         /// Scans <see cref="DeviceEventLoggingConfiguration.CsvPath"/> for <c>*.csv</c> files,
         /// reads the intersection number from each file's header line 2, validates it exists in the
-        /// Locations table, looks up the matching <see cref="Device"/>, and sends 
-        /// <c>Tuple&lt;Device, FileInfo&gt;</c> into the <see cref="DecodeEventLogWorkflow"/> pipeline.
+        /// Locations table, looks up the matching <see cref="Device"/>, and groups the files by device.
+        /// Each device's files are then sent as <c>Tuple&lt;Device, FileInfo&gt;</c> into their own
+        /// <see cref="DecodeEventLogWorkflow"/> so memory is released between intersections.
         /// </summary>
-        private async Task ProcessCsvDevices(IServiceScope scope, IDeviceRepository repo, DecodeEventLogWorkflow csvWorkflow, CancellationToken cancellationToken)
+        private async Task ProcessCsvDevices(IServiceScope scope, IDeviceRepository repo, CancellationToken cancellationToken)
         {
             var locationRepo = scope.ServiceProvider.GetService<ILocationRepository>();
+            var scopeFactory = scope.ServiceProvider.GetService<IServiceScopeFactory>();
+            var batchSize = _options.Value.BatchSize > 0 ? _options.Value.BatchSize : 50000;
             var csvPath = _options.Value.CsvPath;
             var dir = new DirectoryInfo(csvPath);
 
@@ -113,8 +112,12 @@ namespace Utah.Udot.Atspm.Infrastructure.Services.HostedServices
 
             log.LogInformation("Found {DeviceCount} CSV-protocol device(s) in database", csvDevices.Count);
 
-            // Track files that were successfully queued so we can delete them AFTER the workflow finishes
-            var queuedFiles = new List<FileInfo>();
+            // Issues found during the run, logged as a summary at the end
+            var issues = new List<(string Signal, string FileName, string Issue)>();
+
+            // Pass 1: group files by device (only reads the header of each file)
+            var filesByDevice = new Dictionary<Device, List<FileInfo>>();
+            var locationExistsCache = new Dictionary<string, bool>();
 
             foreach (var file in files)
             {
@@ -125,14 +128,21 @@ namespace Utah.Udot.Atspm.Infrastructure.Services.HostedServices
                 if (intersectionId == null)
                 {
                     log.LogWarning("Could not parse intersection ID from CSV header: {FileName}", file.Name);
+                    issues.Add(("Unknown", file.Name, "Could not parse intersection ID from CSV header"));
                     continue;
                 }
 
-                // Check if the location exists in the database
-                var locationExists = await locationRepo.LocationExists(intersectionId);
+                // Check if the location exists in the database (cached so it's one lookup per intersection)
+                if (!locationExistsCache.TryGetValue(intersectionId, out var locationExists))
+                {
+                    locationExists = await locationRepo.LocationExists(intersectionId);
+                    locationExistsCache[intersectionId] = locationExists;
+                }
+
                 if (!locationExists)
                 {
                     log.LogWarning("Location with ID '{IntersectionId}' does not exist in database. Skipping file {FileName}", intersectionId, file.Name);
+                    issues.Add((intersectionId, file.Name, "Location does not exist in database"));
                     continue;
                 }
 
@@ -141,36 +151,93 @@ namespace Utah.Udot.Atspm.Infrastructure.Services.HostedServices
                 if (device == null)
                 {
                     log.LogWarning("No matching device found for intersection ID '{IntersectionId}' from file {FileName}", intersectionId, file.Name);
+                    issues.Add((intersectionId, file.Name, "No matching CSV device found"));
                     continue;
                 }
 
-                log.LogDebug("Queuing file {FileName} for device {DeviceIdentifier}", file.Name, device.DeviceIdentifier);
-                await csvWorkflow.Input.SendAsync(Tuple.Create(device, file));
+                if (!filesByDevice.TryGetValue(device, out var deviceFiles))
+                    filesByDevice[device] = deviceFiles = new List<FileInfo>();
 
-                queuedFiles.Add(file);
+                deviceFiles.Add(file);
             }
 
-            log.LogInformation("Queued {QueuedCount} of {FileCount} CSV file(s) for decoding", queuedFiles.Count, files.Length);
+            log.LogInformation("Grouped {QueuedCount} of {FileCount} CSV file(s) into {DeviceCount} intersection(s)",
+                filesByDevice.Values.Sum(v => v.Count), files.Length, filesByDevice.Count);
 
-            csvWorkflow.Input.Complete();
-            await Task.WhenAll(csvWorkflow.Steps.Select(s => s.Completion));
-
-            // Delete source files only after the workflow has fully completed
-            if (_options.Value.DeleteCsvSource)
+            // Pass 2: one workflow per intersection so memory is released between them
+            foreach (var (device, deviceFiles) in filesByDevice)
             {
-                foreach (var file in queuedFiles)
+                cancellationToken.ThrowIfCancellationRequested();
+
+                log.LogInformation("Processing {FileCount} CSV file(s) for device {DeviceIdentifier}", deviceFiles.Count, device.DeviceIdentifier);
+
+                // Constructor already starts initialization, so only wait for it (see Process)
+                var csvWorkflow = new DecodeEventLogWorkflow(scopeFactory, batchSize, cancellationToken);
+                await WaitForInitializedAsync(csvWorkflow, cancellationToken);
+
+                foreach (var file in deviceFiles)
                 {
-                    try { file.Delete(); }
-                    catch { /* non-fatal: file may already be gone or locked */ }
+                    log.LogDebug("Queuing file {FileName} for device {DeviceIdentifier}", file.Name, device.DeviceIdentifier);
+                    await csvWorkflow.Input.SendAsync(Tuple.Create(device, file));
                 }
+
+                csvWorkflow.Input.Complete();
+                await Task.WhenAll(csvWorkflow.Steps.Select(s => s.Completion));
+
+                // Files that could not be decoded are skipped and kept
+                var failedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var failure in csvWorkflow.DecodeDeviceData.Failures)
+                {
+                    failedFiles.Add(failure.Item2.FullName);
+                    issues.Add((device.DeviceIdentifier, failure.Item2.Name, failure.Item3));
+                }
+
+                var failedCount = csvWorkflow.SaveEventsToRepo.FailedCount;
+
+                if (failedCount > 0)
+                {
+                    log.LogWarning("{FailedCount} save(s) failed for device {DeviceIdentifier}. Keeping its {FileCount} CSV file(s) so they are retried next run",
+                        failedCount, device.DeviceIdentifier, deviceFiles.Count);
+                    issues.Add((device.DeviceIdentifier, "All files", $"{failedCount} save(s) failed. Files kept to retry next run"));
+                    continue;
+                }
+
+                // Delete this intersection's decoded source files only after all of its data saved
+                if (_options.Value.DeleteCsvSource)
+                {
+                    foreach (var file in deviceFiles.Where(f => !failedFiles.Contains(f.FullName)))
+                    {
+                        try { file.Delete(); }
+                        catch (Exception ex)
+                        {
+                            log.LogWarning(ex, "Could not delete CSV file {FileName}", file.FullName);
+                            issues.Add((device.DeviceIdentifier, file.Name, $"Could not delete file: {ex.Message}"));
+                        }
+                    }
+                }
+            }
+
+            // Summary of everything that was skipped or failed this run
+            if (issues.Count == 0)
+            {
+                log.LogInformation("CSV import finished with no issues");
+                return;
+            }
+
+            log.LogWarning("CSV import finished with {IssueCount} issue(s):", issues.Count);
+
+            foreach (var (signal, fileName, issue) in issues.OrderBy(i => i.Signal).ThenBy(i => i.FileName))
+            {
+                log.LogWarning("CSV import issue - Signal {Signal} | {FileName} | {Issue}", signal, fileName, issue);
             }
         }
 
         /// <summary>
-        /// Waits for a workflow's initialization (started via <c>BeginInit()</c>) to complete.
-        /// <c>ServiceObjectBase</c> only auto-calls <c>BeginInit()</c> when <c>initialize:true</c> is
-        /// passed to its constructor; <c>WorkflowBase</c> does not, so callers must call
-        /// <c>BeginInit()</c> explicitly before calling this method.
+        /// Waits for a workflow's background initialization (started by the <c>WorkflowBase</c> constructor
+        /// via <c>BeginInit()</c>) to complete. Calling <c>BeginInit()</c> or <c>Initialize()</c> explicitly a
+        /// second time races with the background task and causes <c>LinkSteps()</c> to execute twice, resulting
+        /// in the BroadcastBlock delivering each item to downstream steps twice.
         /// </summary>
         private static async Task WaitForInitializedAsync(Utah.Udot.NetStandardToolkit.BaseClasses.ServiceObjectBase workflow, CancellationToken ct)
         {

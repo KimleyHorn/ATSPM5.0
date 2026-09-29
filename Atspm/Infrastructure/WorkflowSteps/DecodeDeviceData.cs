@@ -16,6 +16,7 @@
 #endregion
 
 using Microsoft.Extensions.DependencyInjection;
+using System.Collections.Concurrent;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks.Dataflow;
 using Utah.Udot.Atspm.Data.Models.EventLogModels;
@@ -40,6 +41,13 @@ namespace Utah.Udot.ATSPM.Infrastructure.WorkflowSteps
             _services = services;
         }
 
+        private readonly ConcurrentQueue<Tuple<Device, FileInfo, string>> _failures = new();
+
+        /// <summary>
+        /// Files that could not be decoded, with the reason
+        /// </summary>
+        public IReadOnlyCollection<Tuple<Device, FileInfo, string>> Failures => _failures;
+
         /// <inheritdoc/>
         protected override async IAsyncEnumerable<Tuple<Device, EventLogModelBase>> Process(Tuple<Device, FileInfo> input, [EnumeratorCancellation] CancellationToken cancelToken = default)
         {
@@ -50,10 +58,30 @@ namespace Utah.Udot.ATSPM.Infrastructure.WorkflowSteps
             await using var scope = _services.CreateAsyncScope();
             var importer = scope.ServiceProvider.GetService<IEventLogImporter>();
 
-            await foreach (var item in importer.Execute(input, cancelToken).WithCancellation(cancelToken))
+            await using var enumerator = importer.Execute(input, cancelToken).GetAsyncEnumerator(cancelToken);
+            var count = 0;
+
+            // The base class swallows exceptions, so catch and record them here
+            // so callers can tell which files failed and why
+            while (true)
             {
-                yield return item;
+                try
+                {
+                    if (!await enumerator.MoveNextAsync())
+                        break;
+                }
+                catch (Exception ex)
+                {
+                    _failures.Enqueue(Tuple.Create(input.Item1, input.Item2, ex.InnerException?.Message ?? ex.Message));
+                    yield break;
+                }
+
+                count++;
+                yield return enumerator.Current;
             }
+
+            if (count == 0)
+                _failures.Enqueue(Tuple.Create(input.Item1, input.Item2, "No events decoded. File may be corrupt, empty, or outside the acceptable date range"));
         }
     }
 }
