@@ -16,6 +16,7 @@
 #endregion
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks.Dataflow;
 using Utah.Udot.NetStandardToolkit.Workflows;
@@ -39,14 +40,37 @@ namespace Utah.Udot.ATSPM.Infrastructure.WorkflowSteps
             _services = services;
         }
 
+        private int _failedCount;
+
+        /// <summary>
+        /// Number of <see cref="CompressedEventLogBase"/> entries that failed to save
+        /// </summary>
+        public int FailedCount => _failedCount;
+
         /// <inheritdoc/>
         protected override async IAsyncEnumerable<CompressedEventLogBase> Process(CompressedEventLogBase input, [EnumeratorCancellation] CancellationToken cancelToken = default)
         {
             using (var scope = _services.CreateAsyncScope())
             {
                 var repo = scope.ServiceProvider.GetService<IEventLogRepository>();
+                CompressedEventLogBase result = null;
 
-                yield return await repo.Upsert(input);
+                // The base class swallows exceptions, so catch, log and count them here
+                // so callers can tell whether everything saved
+                try
+                {
+                    result = await repo.Upsert(input);
+                }
+                catch (Exception ex)
+                {
+                    Interlocked.Increment(ref _failedCount);
+                    scope.ServiceProvider.GetService<ILogger<SaveArchivedEventLogs>>()?.LogError(ex,
+                        "Failed to save {DataType} events for location {LocationIdentifier} on {ArchiveDate}",
+                        input.DataType?.Name, input.LocationIdentifier, input.ArchiveDate);
+                }
+
+                if (result != null)
+                    yield return result;
             }
         }
     }

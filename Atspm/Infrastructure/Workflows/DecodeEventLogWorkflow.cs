@@ -73,7 +73,7 @@ namespace Utah.Udot.ATSPM.Infrastructure.Workflows
             DecodeDeviceData.LinkTo(BatchEventLogs, new DataflowLinkOptions() { PropagateCompletion = true });
             BatchEventLogs.LinkTo(ArchiveDeviceData, new DataflowLinkOptions() { PropagateCompletion = true });
             ArchiveDeviceData.LinkTo(SaveEventsToRepo, new DataflowLinkOptions() { PropagateCompletion = true });
-            SaveEventsToRepo.LinkTo(Output, new DataflowLinkOptions() { PropagateCompletion = true });
+            SaveEventsToRepo.LinkTo(DataflowBlock.NullTarget<CompressedEventLogBase>());
         }
     }
 }

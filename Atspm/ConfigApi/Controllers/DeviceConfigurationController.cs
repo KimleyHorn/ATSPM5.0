@@ -18,6 +18,7 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.OData.Query;
+using System.Reflection;
 using Utah.Udot.Atspm.Data.Models;
 using Utah.Udot.Atspm.Data.Models.EventLogModels;
 using Utah.Udot.Atspm.Repositories.ConfigurationRepositories;
@@ -78,15 +79,29 @@ namespace Utah.Udot.Atspm.ConfigApi.Controllers
             var result = AppDomain
                 .CurrentDomain
                 .GetAssemblies()
-                .SelectMany(m => m.GetTypes()
+                .SelectMany(GetLoadableTypes)
                 .Where(w => w.GetInterfaces()
-                .Contains(typeof(IEventLogDecoder))))
+                .Contains(typeof(IEventLogDecoder)))
                 .Where(w => !w.IsAbstract)
                 .Where(w => !w.IsInterface)
                 .Select(s => s.Name)
                 .ToList();
 
             return Ok(result);
+        }
+
+        // Some third-party assemblies (e.g. Microsoft.Data.SqlClient) contain types that
+        // can't be loaded via reflection; skip those instead of failing the whole scan.
+        private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
+        {
+            try
+            {
+                return assembly.GetTypes();
+            }
+            catch (ReflectionTypeLoadException e)
+            {
+                return e.Types.OfType<Type>();
+            }
         }
 
         #endregion
