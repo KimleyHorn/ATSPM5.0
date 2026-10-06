@@ -2,6 +2,12 @@
 
 `DatabaseInstaller` is a command-line utility for applying database migrations, moving event log data, copying configuration data, and seeding test records.
 
+## Runbooks
+
+- [ATSPM 5 Fresh Install Runbook](ATSPM5-Fresh-Install-Runbook.md)
+- [ATSPM 5 Local Upgrade Runbook](ATSPM5-Upgrade-Runbook.md)
+- [ATSPM 5 On-Site Database Migration Runbook](ATSPM5-On-Site-Database-Migration-Runbook.md)
+
 ## Running The Tool
 
 Run commands from the `DatabaseInstaller` project root:

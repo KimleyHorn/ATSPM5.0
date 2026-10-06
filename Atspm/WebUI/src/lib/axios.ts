@@ -25,9 +25,34 @@ export let dataAxios: ReturnType<typeof createAxiosInstance>
 export let speedAxios: ReturnType<typeof createAxiosInstance>
 
 const API_VERSION_PATH = '/api/v1'
+const LOCAL_GATEWAY_PREFIXES = ['/config', '/data', '/report', '/identity']
 
 function normalizeApiRoot(baseURL: string): string {
-  return baseURL.replace(/\/api\/v1\/?$/i, '').replace(/\/+$/, '')
+  const normalizedBaseUrl = baseURL
+    .replace(/\/api\/v1\/?$/i, '')
+    .replace(/\/+$/, '')
+
+  try {
+    const url = new URL(normalizedBaseUrl)
+    const isLocalhost =
+      url.hostname === 'localhost' ||
+      url.hostname === '127.0.0.1' ||
+      url.hostname === '[::1]'
+
+    if (
+      isLocalhost &&
+      LOCAL_GATEWAY_PREFIXES.some(
+        (prefix) => url.pathname.toLowerCase() === prefix
+      )
+    ) {
+      url.pathname = ''
+      return url.toString().replace(/\/+$/, '')
+    }
+  } catch {
+    // Relative gateway URLs like /config are valid for Docker/nginx.
+  }
+
+  return normalizedBaseUrl
 }
 
 export function buildApiBaseUrl(

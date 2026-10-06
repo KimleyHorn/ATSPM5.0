@@ -72,7 +72,7 @@ export default function Signin() {
   useEffect(() => {
     setEmailError(null)
     if (queryDataError) {
-      setErrors(queryDataError.response.data.message)
+      setErrors('Invalid email or password')
     }
   }, [queryDataError, email])
 

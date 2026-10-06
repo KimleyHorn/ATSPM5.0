@@ -278,6 +278,24 @@ namespace DatabaseInstaller.Services
 
             await identityContext.Database.MigrateAsync(cancellationToken);
             var userManager = serviceProvider.GetRequiredService<UserManager<ApplicationUser>>();
+            var roleManager = serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
+            // Ensure the configured admin role exists before assigning the user to it.
+            if (!await roleManager.RoleExistsAsync(adminRole))
+            {
+                _logger.LogInformation("Admin role '{AdminRole}' does not exist. Creating it.", adminRole);
+
+                var roleResult = await roleManager.CreateAsync(new IdentityRole(adminRole));
+                if (!roleResult.Succeeded)
+                {
+                    _logger.LogError("Failed to create admin role '{AdminRole}': {Errors}",
+                        adminRole,
+                        string.Join(", ", roleResult.Errors.Select(e => e.Description)));
+                    return;
+                }
+
+                _logger.LogInformation("Admin role '{AdminRole}' created successfully.", adminRole);
+            }
 
             // Check if the admin user already exists.
             var adminUser = await userManager.FindByEmailAsync(_config.AdminEmail);
