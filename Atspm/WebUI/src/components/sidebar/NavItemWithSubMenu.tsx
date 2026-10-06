@@ -16,7 +16,9 @@ import React from 'react'
 
 type SubItem = {
   text: string
-  url: string
+  url?: string
+  onClick?: () => void
+  selected?: boolean
 }
 
 type NavItemFlyoutProps = {
@@ -42,8 +44,12 @@ export default function NavItemFlyout({
     setOpen(true)
   }
 
+  // relatedTarget isn't always a DOM node (e.g. leaving the window), and contains() throws on non-nodes
+  const isInside = (container: HTMLElement | null, target: EventTarget | null) =>
+    target instanceof Node && !!container?.contains(target)
+
   const handleParentMouseLeave = (e: React.MouseEvent) => {
-    if (popperRef.current?.contains(e.relatedTarget as Node)) {
+    if (isInside(popperRef.current, e.relatedTarget)) {
       return
     }
     setOpen(false)
@@ -54,19 +60,25 @@ export default function NavItemFlyout({
   }
 
   const handlePopperMouseLeave = (e: React.MouseEvent) => {
-    if (anchorRef.current?.contains(e.relatedTarget as Node)) {
+    if (isInside(anchorRef.current, e.relatedTarget)) {
       return
     }
     setOpen(false)
   }
 
-  const handleMenuItemClick = (url: string) => {
-    toggleSidebar()
-    router.push(url)
+  const handleMenuItemClick = (item: SubItem) => {
+    if (item.onClick) {
+      item.onClick()
+    } else if (item.url) {
+      toggleSidebar()
+      router.push(item.url)
+    }
     setOpen(false)
   }
 
-  const isChildActive = subItems.some((item) => router.asPath === item.url)
+  const isChildActive = subItems.some(
+    (item) => item.url !== undefined && router.asPath === item.url
+  )
   const baseColor = theme.palette.primary.main
 
   return (
@@ -111,12 +123,12 @@ export default function NavItemFlyout({
           onMouseLeave={handlePopperMouseLeave}
           sx={{ py: 1 }}
         >
-          {subItems.map(({ text: subText, url }) => {
-            const selected = router.asPath === url
+          {subItems.map((item) => {
+            const selected = item.selected ?? router.asPath === item.url
             return (
               <MenuItem
-                key={url}
-                onClick={() => handleMenuItemClick(url)}
+                key={item.url ?? item.text}
+                onClick={() => handleMenuItemClick(item)}
                 selected={selected}
                 sx={{
                   color: theme.palette.text.primary,
@@ -128,7 +140,7 @@ export default function NavItemFlyout({
                   },
                 }}
               >
-                {subText}
+                {item.text}
               </MenuItem>
             )
           })}

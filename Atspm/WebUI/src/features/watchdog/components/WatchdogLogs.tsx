@@ -507,17 +507,17 @@ const WatchDogLogs = () => {
               }}
               sx={{
                 '& .MuiDataGrid-row.selected-row': {
-                  backgroundColor: 'lightgrey',
+                  backgroundColor: 'action.selected',
                 },
                 [`& .${gridClasses.columnHeaders}`]: {
                   position: 'sticky',
-                  backgroundColor: 'white',
+                  backgroundColor: 'background.paper',
                   zIndex: 1,
                 },
                 [`& .${gridClasses.toolbarContainer}`]: {
                   position: 'sticky',
                   top: '0',
-                  backgroundColor: 'white',
+                  backgroundColor: 'background.paper',
                   zIndex: '1',
                   pb: '5px',
                 },

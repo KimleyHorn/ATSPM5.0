@@ -27,7 +27,7 @@ export default function AggregateResults({ chartData, refs }: props) {
               my: 3,
               width: '99%',
               marginLeft: '2px',
-              backgroundColor: 'white',
+              backgroundColor: 'background.paper',
             }}
           >
             <ApacheEChart

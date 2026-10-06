@@ -36,7 +36,7 @@ export default function DefaultChartResults({
               backgroundColor: chartWrapper.chart.displayProps
                 ?.isPermissivePhase
                 ? theme.palette.background.highlight
-                : 'white',
+                : theme.palette.background.paper,
             }}
           >
             <ApacheEChart

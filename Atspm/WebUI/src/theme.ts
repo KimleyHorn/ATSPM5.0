@@ -15,9 +15,11 @@
 // limitations under the License.
 // #endregion
 import { createTheme } from '@mui/material/styles'
-import { createContext, useMemo, useState } from 'react'
+import { createContext, useEffect, useMemo, useState } from 'react'
 
 type modeOptions = 'light' | 'dark'
+
+const COLOR_MODE_STORAGE_KEY = 'colorMode'
 
 export const themeSettings = (mode: modeOptions) => {
   return {
@@ -114,15 +116,44 @@ export const ColorModeContext = createContext({
   toggleColorMode: () => {
     console.warn('toggleColorMode is not implemented.')
   },
+  setColorMode: (_mode: modeOptions) => {
+    console.warn('setColorMode is not implemented.')
+  },
 })
+
+const saveColorMode = (mode: modeOptions) => {
+  try {
+    localStorage.setItem(COLOR_MODE_STORAGE_KEY, mode)
+  } catch {
+    // storage unavailable, mode just won't persist
+  }
+}
 
 export const useMode = () => {
   const [mode, setMode] = useState<modeOptions>('light')
 
+  // Read the saved mode after mount (localStorage isn't available during SSR)
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(COLOR_MODE_STORAGE_KEY)
+      if (saved === 'light' || saved === 'dark') setMode(saved)
+    } catch {
+      // storage unavailable, keep default
+    }
+  }, [])
+
   const colorMode = useMemo(
     () => ({
       toggleColorMode: () => {
-        setMode((prev) => (prev === 'light' ? 'dark' : 'light'))
+        setMode((prev) => {
+          const next = prev === 'light' ? 'dark' : 'light'
+          saveColorMode(next)
+          return next
+        })
+      },
+      setColorMode: (next: modeOptions) => {
+        saveColorMode(next)
+        setMode(next)
       },
     }),
     []

@@ -62,7 +62,8 @@ export default function Topbar() {
         display: 'flex',
         alignItems: 'center',
         paddingX: 2,
-        borderBottom: '1px solid rgba(0, 0, 0, 0.12)',
+        borderBottom: 1,
+        borderColor: 'divider',
         width: '100%',
         height: topbarHeight,
       }}
@@ -115,7 +116,7 @@ export default function Topbar() {
                 sx={{
                   mx: '2px',
                   textTransform: 'none',
-                  color: 'black',
+                  color: 'text.primary',
                 }}
               >
                 <Typography fontWeight={400} sx={{ textTransform: 'none' }}>

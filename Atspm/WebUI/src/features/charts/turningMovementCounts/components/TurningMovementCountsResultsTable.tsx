@@ -212,7 +212,7 @@ export default function TurningMovementCountsResultsTable({
                 sx={{
                   '& .MuiTableCell-head': {
                     fontSize: '0.8rem',
-                    bgcolor: 'white',
+                    bgcolor: 'background.paper',
                     lineHeight: '1rem',
                     padding: '0.5rem',
                   },
