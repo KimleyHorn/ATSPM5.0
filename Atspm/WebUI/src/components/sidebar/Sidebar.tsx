@@ -2,7 +2,9 @@ import NavItemWithSubMenu from '@/components/sidebar/NavItemWithSubMenu'
 import { topbarHeight } from '@/components/topbar'
 import { useSideBarPermission } from '@/features/identity/pagesCheck'
 import { useSidebarStore } from '@/stores/sidebar'
+import { ColorModeContext } from '@/theme'
 import AddchartOutlinedIcon from '@mui/icons-material/AddchartOutlined'
+import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined'
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined'
 import FileDownloadIcon from '@mui/icons-material/FileDownload'
 import QueryStatsIcon from '@mui/icons-material/QueryStats'
@@ -11,7 +13,8 @@ import ShowChartOutlinedIcon from '@mui/icons-material/ShowChartOutlined'
 import SignalCellularAltOutlinedIcon from '@mui/icons-material/SignalCellularAltOutlined'
 import { Box, Drawer, List, useTheme } from '@mui/material'
 import Image from 'next/image'
-import React from 'react'
+import LightModeOutlinedIcon from '@mui/icons-material/LightModeOutlined'
+import React, { useContext } from 'react'
 import NavItem from './NavItem'
 import Sponsor from './Sponsor'
 import SubMenu from './SubMenu'
@@ -24,6 +27,21 @@ export default function Sidebar() {
   const hasDataViewPermission = useSideBarPermission('data:view')
   const hasWatchDogPermission = useSideBarPermission('watchdog:view')
   const hasLTGRPermission = useSideBarPermission('Report:view')
+  const { setColorMode } = useContext(ColorModeContext)
+  const isDarkMode = theme.palette.mode === 'dark'
+
+  const themeOptions = [
+    {
+      text: 'Light',
+      onClick: () => setColorMode('light'),
+      selected: !isDarkMode,
+    },
+    {
+      text: 'Dark',
+      onClick: () => setColorMode('dark'),
+      selected: isDarkMode,
+    },
+  ]
 
   const reportsList = [
     {
@@ -137,6 +155,15 @@ export default function Sidebar() {
               />
             </SubMenu>
           )}
+          <SubMenu subheader={'Settings'}>
+            <NavItemWithSubMenu
+              icon={
+                isDarkMode ? <DarkModeOutlinedIcon /> : <LightModeOutlinedIcon />
+              }
+              text="Theme"
+              subItems={themeOptions}
+            />
+          </SubMenu>
         </List>
         <Box
           sx={{

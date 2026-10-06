@@ -86,7 +86,7 @@ const ApproachEditorRowHeader = ({
           padding: 1,
           backgroundColor: approach.isNew
             ? 'rgba(100, 210, 100, 0.3)'
-            : 'white',
+            : 'background.paper',
         }}
       >
         <ButtonBase

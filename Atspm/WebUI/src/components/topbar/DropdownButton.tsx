@@ -46,7 +46,7 @@ const DropDownButton = ({
         endIcon={<ArrowDropDownIcon />}
         sx={{
           mx: '2px',
-          color: 'black',
+          color: 'text.primary',
           textTransform: 'none',
           '& .MuiButton-endIcon': { ml: '0px' },
         }}

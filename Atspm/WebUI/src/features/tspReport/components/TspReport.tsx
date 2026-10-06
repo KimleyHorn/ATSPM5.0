@@ -265,7 +265,7 @@ export default function TspReport({ report, reportOptions }: TspReportProps) {
         </Box>
         <Paper
           ref={contentRef}
-          sx={{ position: 'relative', backgroundColor: 'white' }}
+          sx={{ position: 'relative', backgroundColor: 'background.paper' }}
         >
           <TabList
             onChange={handleTabChange}

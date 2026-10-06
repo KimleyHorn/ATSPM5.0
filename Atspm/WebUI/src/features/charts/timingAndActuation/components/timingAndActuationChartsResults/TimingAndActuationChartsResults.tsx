@@ -62,7 +62,7 @@ export default function TimingAndActuationChartsResults({
               backgroundColor:
                 chartWrapper.chart.displayProps?.phaseType == 'Permissive'
                   ? theme.palette.background.highlight
-                  : 'white',
+                  : theme.palette.background.paper,
               borderLeft: (() => {
                 switch (
                   chartWrapper.chart.displayProps.approachDescription.charAt(0)
