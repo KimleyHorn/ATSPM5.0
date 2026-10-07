@@ -151,7 +151,7 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices
                 .ToList();
 
             // Apply sorting based on the sort option
-            Func<WatchDogLogEventWithCountAndDate, object> sortKeySelector = sortOption.ToLower() switch
+            Func<WatchDogLogEventWithCountAndDate, object> sortKeySelector = sortOption?.ToLowerInvariant() switch
             {
                 "error" => r => r.EventCount, // Sort by IssueType (Error)
                 "consecutive" => r => r.ConsecutiveOccurenceCount, // Sort by ConsecutiveOccurenceCount

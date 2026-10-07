@@ -39,6 +39,15 @@ namespace Utah.Udot.ATSPM.SqlDatabaseProvider.Migrations
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
 
+            modelBuilder.Entity("Utah.Udot.Atspm.Data.Models.WatchdogSettingsRecord", b =>
+                {
+                    b.Property<int>("Id").ValueGeneratedNever().HasColumnType("int");
+                    b.Property<string>("SettingsJson").IsRequired().IsUnicode(false).HasColumnType("varchar(max)");
+                    b.Property<DateTimeOffset>("UpdatedAt").HasColumnType("datetimeoffset");
+                    b.HasKey("Id");
+                    b.ToTable("WatchdogSettings");
+                });
+
             modelBuilder.Entity("AreaLocation", b =>
                 {
                     b.Property<int>("AreasId")

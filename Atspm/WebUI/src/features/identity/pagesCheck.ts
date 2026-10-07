@@ -32,6 +32,7 @@ export enum PageNames {
   Routes = 'Routes',
   Users = ' Users',
   WatchdogDashboard = 'Watchdog Dashboard',
+  WatchdogSettings = 'Watchdog Settings',
   Impacts = 'Impacts',
   ImpactTypes = 'Impact Types',
   Segments = 'Segments',
@@ -42,6 +43,7 @@ const generalConfigListToLink: Map<string, string> = new Map([
   [PageNames.FAQs, '/admin/faq'],
   [PageNames.MenuItems, '/admin/menu-items'],
   [PageNames.MeasureDefaults, '/admin/measure-defaults'],
+  [PageNames.WatchdogSettings, '/admin/watchdog-settings'],
 ])
 
 const locationConfigListToLink: Map<string, string> = new Map([

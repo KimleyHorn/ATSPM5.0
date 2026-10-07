@@ -25,6 +25,7 @@ using Utah.Udot.Atspm.ConfigApi.Services;
 using Utah.Udot.Atspm.Data;
 using Utah.Udot.Atspm.Infrastructure.Extensions;
 using Utah.Udot.Atspm.Infrastructure.Services;
+using Utah.Udot.Atspm.Infrastructure.Services.WatchDogServices;
 using Utah.Udot.ATSPM.ConfigApi.Mappings;
 using Utah.Udot.ATSPM.ConfigApi.Utility;
 using Utah.Udot.NetStandardToolkit.Configuration;
@@ -94,6 +95,7 @@ builder.Host
         s.AddAtspmEFConfigRepositories();
         s.AddScoped<IRouteService, RouteService>();
         s.AddScoped<IApproachService, ApproachService>();
+        s.AddScoped<WatchdogSettingsResolver>();
         s.AddPathBaseFilter(h);
         s.AddAtspmIdentity(h);
         s.AddHttpClient<IGitHubReleaseService, GitHubReleaseService>();

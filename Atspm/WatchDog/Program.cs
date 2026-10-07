@@ -27,6 +27,7 @@ using System.CommandLine.Parsing;
 using Utah.Udot.Atspm.Data;
 using Utah.Udot.Atspm.Data.Models.IdentityModels;
 using Utah.Udot.Atspm.Infrastructure.Extensions;
+using Utah.Udot.Atspm.Infrastructure.Services.WatchDogServices;
 using Utah.Udot.Atspm.Services;
 using Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices;
 using Utah.Udot.ATSPM.WatchDog.Commands;
@@ -76,6 +77,7 @@ cmdBuilder.UseHost(hostBuilder =>
         s.AddScoped<PhaseService>();
         s.AddScoped<SegmentedErrorsService>();
         s.AddScoped<IWatchDogIgnoreEventService, WatchDogIgnoreEventService>();
+        s.AddScoped<WatchdogSettingsResolver>();
 
         // Register the hosted service with the date
         s.AddIdentity<ApplicationUser, IdentityRole>() // Add this line to register Identity

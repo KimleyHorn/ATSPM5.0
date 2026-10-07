@@ -25,6 +25,7 @@ using System.Reflection.Emit;
 using Utah.Udot.Atspm.Data.Configuration.IdentityConfiguration;
 using Utah.Udot.Atspm.Data.Enums;
 using Utah.Udot.Atspm.Data.Interfaces;
+using Utah.Udot.Atspm.Data.Models;
 using Utah.Udot.Atspm.Data.Utility;
 
 namespace Utah.Udot.Atspm.Data
@@ -180,6 +181,8 @@ namespace Utah.Udot.Atspm.Data
         /// </summary>
         public virtual DbSet<WatchDogIgnoreEvent> WatchDogIgnoreEvents { get; set; }
 
+        public virtual DbSet<WatchdogSettingsRecord> WatchdogSettings { get; set; }
+
         /// <inheritdoc/>
         protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
         {
@@ -202,6 +205,13 @@ namespace Utah.Udot.Atspm.Data
         /// <inheritdoc/>
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            modelBuilder.Entity<WatchdogSettingsRecord>(entity =>
+            {
+                entity.ToTable("WatchdogSettings");
+                entity.HasKey(x => x.Id);
+                entity.Property(x => x.Id).ValueGeneratedNever();
+                entity.Property(x => x.SettingsJson).IsRequired();
+            });
             modelBuilder.ApplyConfiguration(new ApproachConfiguration());
             modelBuilder.ApplyConfiguration(new AreaConfiguration());
             modelBuilder.ApplyConfiguration(new DetectionTypeConfiguration());

@@ -69,6 +69,8 @@ dkms.conf
 # Generated code files
 *.Designer.cs
 *.designer.cs
+# EF migration designers are source code and must be committed with their migrations.
+!Atspm/*DatabaseProvider/Migrations/**/*.Designer.cs
 *.g.cs
 *.g.i.cs
 *.generated.cs

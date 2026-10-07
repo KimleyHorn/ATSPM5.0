@@ -22,6 +22,7 @@ using System.Diagnostics;
 using Utah.Udot.Atspm.Business.Watchdog;
 using Utah.Udot.Atspm.Infrastructure.LogMessages;
 using Utah.Udot.Atspm.Infrastructure.Services.HostedServices;
+using Utah.Udot.Atspm.Infrastructure.Services.WatchDogServices;
 
 namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices
 {
@@ -33,14 +34,26 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices
     /// the <see cref="ScanService"/> to perform the scan operation, typically used for monitoring and reporting
     /// on traffic signal performance and anomalies.
     /// </summary>
-    public class ScanHostedService(ILogger<ScanHostedService> log, IServiceScopeFactory serviceProvider, IOptions<WatchdogConfiguration> options, TimeProvider timeProvider) : HostedServiceBase(log, serviceProvider)
+    public class ScanHostedService(ILogger<ScanHostedService> log, IServiceScopeFactory serviceProvider, IOptions<WatchdogConfiguration> commandLineOptions, TimeProvider timeProvider) : HostedServiceBase(log, serviceProvider)
     {
-        private readonly WatchdogConfiguration _options = options.Value;
         private readonly ScanHostedServiceLogMessages logMessages = new(log, nameof(ScanHostedService));
 
         /// <inheritdoc/>
         public override async Task Process(IServiceScope scope, Stopwatch stopwatch = null, CancellationToken cancellationToken = default)
         {
+            var resolver = scope.ServiceProvider.GetRequiredService<WatchdogSettingsResolver>();
+            var (_options, _) = await resolver.GetEffectiveAsync(cancellationToken);
+            // System.CommandLine binds only explicit command options after configuration.
+            // Preserve one-off CLI overrides (especially scan dates) above saved/configured values.
+            var suppliedOptions = Environment.GetCommandLineArgs()
+                .Where(x => x.StartsWith("--", StringComparison.Ordinal))
+                .Select(x => x[2..].Split('=')[0])
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            foreach (var property in typeof(WatchdogConfiguration).GetProperties())
+            {
+                if (suppliedOptions.Contains(property.Name))
+                    property.SetValue(_options, property.GetValue(commandLineOptions.Value));
+            }
             var amScanDate = _options.GetAmScanDate(timeProvider);
             var pmScanDate = _options.GetPmScanDate(timeProvider);
             var rampMissedDetectorHitsStartScanDate = _options.GetRampMissedDetectorHitsStartScanDate(timeProvider);

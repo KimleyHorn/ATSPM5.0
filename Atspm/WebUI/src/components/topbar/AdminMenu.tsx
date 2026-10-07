@@ -24,7 +24,7 @@ const GROUPS: Record<string, PageNames[]> = {
     PageNames.UpdateNewEntityVersion,
   ],
   'User Management': [PageNames.Users, PageNames.Roles],
-  Other: [PageNames.FAQs, PageNames.MenuItems, PageNames.MeasureDefaults],
+  Other: [PageNames.FAQs, PageNames.MenuItems, PageNames.MeasureDefaults, PageNames.WatchdogSettings],
 }
 
 const AdminMenu = () => {
