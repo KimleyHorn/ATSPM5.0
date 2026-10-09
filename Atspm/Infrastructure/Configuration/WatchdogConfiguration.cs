@@ -52,6 +52,7 @@ namespace Utah.Udot.Atspm.Infrastructure.Configuration
         public bool EmailAmErrors { get; set; } = true;
         public bool EmailRampErrors { get; set; } = true;
         public string DefaultEmailAddress { get; set; }
+        public string FromEmailAddress { get; set; }
 
         public string Sort { get; set; }
     }

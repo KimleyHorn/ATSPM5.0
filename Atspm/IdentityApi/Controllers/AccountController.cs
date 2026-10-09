@@ -250,7 +250,10 @@ namespace Identity.Controllers
 
             //HACK: FIX THIS
 
-            var message = new MailMessage(identityOptions.Value.DefaultEmailAddress, model.Email, "Reset Password", $"<p>Please reset your password by clicking <a href=\"{callbackUrl}\">here</a>.</p>");
+            var message = new MailMessage(identityOptions.Value.DefaultEmailAddress, model.Email, "Reset Password", $"<p>Please reset your password by clicking <a href=\"{callbackUrl}\">here</a>.</p>")
+            {
+                IsBodyHtml = true
+            };
             await emailService.SendEmailAsync(message);
 
             //await emailService.SendEmailAsync(

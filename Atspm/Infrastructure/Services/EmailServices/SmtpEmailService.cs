@@ -16,6 +16,7 @@
 #endregion
 
 using MailKit.Security;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using MimeKit;
@@ -31,16 +32,19 @@ namespace Utah.Udot.Atspm.Infrastructure.Services.EmailServices
     {
         private readonly EmailConfiguration _options;
         private readonly ILogger _logger;
+        private readonly bool _useUnencryptedSmtp;
 
         /// <summary>
         /// Smtp email service
         /// </summary>
         /// <param name="options"></param>
         /// <param name="logger"></param>
-        public SmtpEmailService(IOptionsSnapshot<EmailConfiguration> options, ILogger<SmtpEmailService> logger) : base(true)
+        /// <param name="configuration"></param>
+        public SmtpEmailService(IOptionsSnapshot<EmailConfiguration> options, ILogger<SmtpEmailService> logger, IConfiguration configuration = null) : base(true)
         {
             _options = options?.Get(GetType().Name) ?? options?.Value;
             _logger = logger;
+            _useUnencryptedSmtp = configuration?.GetValue<bool>($"{nameof(EmailConfiguration)}:{nameof(SmtpEmailService)}:UseUnencryptedSmtp") == true;
         }
 
         /// <inheritdoc/>
@@ -66,7 +70,15 @@ namespace Utah.Udot.Atspm.Infrastructure.Services.EmailServices
             {
                 try
                 {
-                    await smtp.ConnectAsync(_options.Host, _options.Port, _options.EnableSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.Auto);
+                    if (_useUnencryptedSmtp && (_options.EnableSsl || !string.IsNullOrEmpty(_options.UserName) || !string.IsNullOrEmpty(_options.Password)))
+                    {
+                        throw new InvalidOperationException("Unencrypted SMTP requires EnableSsl=false and no SMTP credentials.");
+                    }
+
+                    var socketOptions = _useUnencryptedSmtp
+                        ? SecureSocketOptions.None
+                        : _options.EnableSsl ? SecureSocketOptions.StartTls : SecureSocketOptions.Auto;
+                    await smtp.ConnectAsync(_options.Host, _options.Port, socketOptions);
                     if (!String.IsNullOrEmpty(_options.UserName) || !String.IsNullOrEmpty(_options.Password))
                     {
                         await smtp.AuthenticateAsync(_options.UserName, _options.Password);

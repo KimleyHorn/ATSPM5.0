@@ -73,6 +73,14 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices
             List<ApplicationUser> users,
             List<WatchDogLogEvent> logsFromPreviousDay)
         {
+            var fromAddress = new MailAddress(options.FromEmailAddress ?? options.DefaultEmailAddress);
+            var adminRecipients = users.GetMailingAddresses().ToList();
+            if (!string.IsNullOrWhiteSpace(options.DefaultEmailAddress) &&
+                !adminRecipients.Any(address => string.Equals(address.Address, options.DefaultEmailAddress, StringComparison.OrdinalIgnoreCase)))
+            {
+                adminRecipients.Add(new MailAddress(options.DefaultEmailAddress));
+            }
+
             if (options.EmailPmErrors || options.EmailAmErrors)
             {
                 string emailScanDatesString = BuildEmailScanDatesShortString(options);
@@ -80,7 +88,7 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices
                 var emailBody = await CreateEmailBody(options, newErrors, dailyRecurringErrors, recurringErrors
                     , locations, logsFromPreviousDay);
 
-                await mailService.SendEmailAsync(new MailAddress(options.DefaultEmailAddress), users.GetMailingAddresses(), subject, emailBody, true);
+                await mailService.SendEmailAsync(fromAddress, adminRecipients, subject, emailBody, true);
             }
 
             //This will send the ramp email.
@@ -92,7 +100,7 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices
                     , locations, logsFromPreviousDay, true);
 
 
-                await mailService.SendEmailAsync(new MailAddress(options.DefaultEmailAddress), users.GetMailingAddresses(), rampsubject, rampEmailBody, true);
+                await mailService.SendEmailAsync(fromAddress, adminRecipients, rampsubject, rampEmailBody, true);
             }
 
         }
@@ -130,7 +138,7 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices
                             LocationsByJurisdiction,
                             logsFromPreviousDay, true);
 
-                        await mailService.SendEmailAsync(new MailAddress(options.DefaultEmailAddress), usersByJurisdiction.GetMailingAddresses(), subject, emailBody, true);
+                        await mailService.SendEmailAsync(new MailAddress(options.FromEmailAddress ?? options.DefaultEmailAddress), usersByJurisdiction.GetMailingAddresses(), subject, emailBody, true);
                     }
                 }
                 else if (options.EmailPmErrors || options.EmailAmErrors)
@@ -146,7 +154,7 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices
                             logsFromPreviousDay);
                         //await mailService.SendEmailAsync(options.DefaultEmailAddress, usersByJurisdiction, subject, emailBody);
 
-                        await mailService.SendEmailAsync(new MailAddress(options.DefaultEmailAddress), usersByJurisdiction.GetMailingAddresses(), subject, emailBody, true);
+                        await mailService.SendEmailAsync(new MailAddress(options.FromEmailAddress ?? options.DefaultEmailAddress), usersByJurisdiction.GetMailingAddresses(), subject, emailBody, true);
                     }
                 }
             }
@@ -186,7 +194,7 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices
                         LocationsByArea,
                         logsFromPreviousDay);
 
-                    await mailService.SendEmailAsync(new MailAddress(options.DefaultEmailAddress), usersByArea.GetMailingAddresses(), subject, emailBody, true);
+                    await mailService.SendEmailAsync(new MailAddress(options.FromEmailAddress ?? options.DefaultEmailAddress), usersByArea.GetMailingAddresses(), subject, emailBody, true);
                 }
             }
         }
@@ -224,7 +232,7 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices
                         LocationsByRegion,
                         logsFromPreviousDay);
 
-                    await mailService.SendEmailAsync(new MailAddress(options.DefaultEmailAddress), usersByRegion.GetMailingAddresses(), subject, emailBody, true);
+                    await mailService.SendEmailAsync(new MailAddress(options.FromEmailAddress ?? options.DefaultEmailAddress), usersByRegion.GetMailingAddresses(), subject, emailBody, true);
                 }
             }
         }

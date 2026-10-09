@@ -88,6 +88,7 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices
 
                 WeekdayOnly = _options.WeekdayOnly,
                 DefaultEmailAddress = _options.DefaultEmailAddress,
+                FromEmailAddress = _options.FromEmailAddress,
                 EmailAllErrors = _options.EmailAllErrors,
                 EmailAmErrors = _options.EmailAmErrors,
                 EmailPmErrors = _options.EmailPmErrors,

@@ -151,7 +151,10 @@ namespace Utah.Udot.ATSPM.Infrastructure.Services.WatchDogServices
                 .ToList();
 
             // Apply sorting based on the sort option
-            Func<WatchDogLogEventWithCountAndDate, object> sortKeySelector = sortOption.ToLower() switch
+            // Sort is configuration-driven and may be absent in a deployed environment.
+            // Treat a missing/unknown value as the timestamp sort instead of allowing the
+            // watchdog hosted service to fail during application startup.
+            Func<WatchDogLogEventWithCountAndDate, object> sortKeySelector = (sortOption ?? "timestamp").ToLowerInvariant() switch
             {
                 "error" => r => r.EventCount, // Sort by IssueType (Error)
                 "consecutive" => r => r.ConsecutiveOccurenceCount, // Sort by ConsecutiveOccurenceCount

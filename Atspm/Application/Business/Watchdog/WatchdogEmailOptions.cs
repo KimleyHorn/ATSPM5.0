@@ -42,6 +42,7 @@ namespace Utah.Udot.Atspm.Business.Watchdog
         public bool EmailPmErrors { get; set; }
         public bool EmailRampErrors { get; set; }
         public string DefaultEmailAddress { get; set; }
+        public string FromEmailAddress { get; set; }
         public bool WeekdayOnly { get; set; }
         public string Sort { get; set; }
     }
