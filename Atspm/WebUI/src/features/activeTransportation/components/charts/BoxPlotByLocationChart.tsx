@@ -2,7 +2,7 @@ import { applyPrintMode } from '@/features/activeTransportation/components/chart
 import { PedatChartsContainerProps } from '@/features/activeTransportation/components/PedatChartsContainer'
 import ApacheEChart from '@/features/charts/components/apacheEChart'
 import transformBoxPlotByLocationTransformer from '@/features/charts/pedat/boxPlotByLocationTransformer'
-import { Paper } from '@mui/material'
+import { Paper, useTheme } from '@mui/material'
 import { useMemo } from 'react'
 
 const BoxPlotByLocationChart = ({
@@ -10,6 +10,8 @@ const BoxPlotByLocationChart = ({
   printMode,
   timeUnit,
 }: PedatChartsContainerProps) => {
+  const theme = useTheme()
+  const chartTheme = theme.palette.mode
   const base = transformBoxPlotByLocationTransformer(data, timeUnit)
 
   const option = useMemo(
@@ -24,6 +26,7 @@ const BoxPlotByLocationChart = ({
         option={option}
         style={{ width: '100%', height: '400px' }}
         hideInteractionMessage
+        theme={chartTheme}
       />
     </Paper>
   )

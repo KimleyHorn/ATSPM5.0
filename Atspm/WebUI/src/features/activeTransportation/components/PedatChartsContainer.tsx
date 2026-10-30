@@ -1,6 +1,8 @@
 import { PedatLocationData } from '@/api/reports'
 import BoxPlotByLocationChart from '@/features/activeTransportation/components/charts/BoxPlotByLocationChart'
+import { themeSettings } from '@/theme'
 import { Box, Button, Tab, Tabs } from '@mui/material'
+import { createTheme, ThemeProvider } from '@mui/material/styles'
 import { useMemo, useRef, useState } from 'react'
 import AverageDailyPedVolByLocationChart from './charts/AverageDailyPedVolByLocationChart'
 import DailyPedVolByMonthChart from './charts/DailyPedVolByMonthChart'
@@ -11,6 +13,8 @@ import TotalPedVolByLocationCharts from './charts/TotalPedVolByLocationCharts'
 import DescriptiveStatsByHourByLocationTable from './DescriptiveStatsByHourByLocationTable'
 import PedatMapContainer from './PedatMapContainer'
 import PedestrianVolumeTimeSeriesTable from './PedestrianVolumeTimeSeriesTable'
+
+const reportTheme = createTheme(themeSettings('light'))
 
 export interface PedatChartsContainerProps {
   data?: PedatLocationData[]
@@ -450,76 +454,78 @@ const PedatChartsContainer = ({
 
       {/* Off-screen staging area for report captures */}
       {isStaging && (
-        <Box
-          ref={stagingRef}
-          sx={{
-            position: 'fixed',
-            left: -10000,
-            top: 0,
-            width: 1200,
-            bgcolor: '#fff',
-            p: 2,
-            zIndex: -1,
-          }}
-        >
+        <ThemeProvider theme={reportTheme}>
           <Box
-            data-report-chart="true"
-            data-title="Average daily pedestrian volume, by location"
-            sx={{ mb: 2 }}
+            ref={stagingRef}
+            sx={{
+              position: 'fixed',
+              left: -10000,
+              top: 0,
+              width: 1200,
+              bgcolor: 'background.paper',
+              p: 2,
+              zIndex: -1,
+            }}
           >
-            <AverageDailyPedVolByLocationChart printMode data={data} />
+            <Box
+              data-report-chart="true"
+              data-title="Average daily pedestrian volume, by location"
+              sx={{ mb: 2 }}
+            >
+              <AverageDailyPedVolByLocationChart printMode data={data} />
+            </Box>
+            <Box
+              data-report-chart="true"
+              data-title="Hourly pedestrian volume, by Hour of day"
+              sx={{ mb: 2 }}
+            >
+              <HourlyPedVolByHourOfDayChart printMode data={data} />
+            </Box>
+            <Box
+              data-report-chart="true"
+              data-title="Hourly pedestrian volume, by day of week"
+              sx={{ mb: 2 }}
+            >
+              <HourlyPedVolByDayOfWeekChart printMode data={data} />
+            </Box>
+            <Box
+              data-report-chart="true"
+              data-title="Daily pedestrian volume, by month"
+              sx={{ mb: 2 }}
+            >
+              <DailyPedVolByMonthChart printMode data={data} />
+            </Box>
+            <Box
+              data-report-chart="true"
+              data-title="Total pedestrian volume, by location"
+              sx={{ mb: 2 }}
+            >
+              <TotalPedVolByLocationCharts printMode data={data} />
+            </Box>
+            <Box
+              data-report-chart="true"
+              data-title="Time series of pedestrian volume by location"
+              sx={{ mb: 2 }}
+            >
+              <TimeSeriesByHourByLocationChart
+                printMode
+                data={data}
+                timeUnit={timeUnitString}
+              />
+            </Box>
+            <Box
+              data-report-chart="true"
+              data-title="Box plot of pedestrian volume by location"
+              sx={{ mb: 2 }}
+            >
+              <BoxPlotByLocationChart
+                printMode
+                data={data}
+                timeUnit={timeUnitString}
+              />
+            </Box>
           </Box>
-          <Box
-            data-report-chart="true"
-            data-title="Hourly pedestrian volume, by Hour of day"
-            sx={{ mb: 2 }}
-          >
-            <HourlyPedVolByHourOfDayChart printMode data={data} />
-          </Box>
-          <Box
-            data-report-chart="true"
-            data-title="Hourly pedestrian volume, by day of week"
-            sx={{ mb: 2 }}
-          >
-            <HourlyPedVolByDayOfWeekChart printMode data={data} />
-          </Box>
-          <Box
-            data-report-chart="true"
-            data-title="Daily pedestrian volume, by month"
-            sx={{ mb: 2 }}
-          >
-            <DailyPedVolByMonthChart printMode data={data} />
-          </Box>
-          <Box
-            data-report-chart="true"
-            data-title="Total pedestrian volume, by location"
-            sx={{ mb: 2 }}
-          >
-            <TotalPedVolByLocationCharts printMode data={data} />
-          </Box>
-          <Box
-            data-report-chart="true"
-            data-title="Time series of pedestrian volume by location"
-            sx={{ mb: 2 }}
-          >
-            <TimeSeriesByHourByLocationChart
-              printMode
-              data={data}
-              timeUnit={timeUnitString}
-            />
-          </Box>
-          <Box
-            data-report-chart="true"
-            data-title="Box plot of pedestrian volume by location"
-            sx={{ mb: 2 }}
-          >
-            <BoxPlotByLocationChart
-              printMode
-              data={data}
-              timeUnit={timeUnitString}
-            />
-          </Box>
-        </Box>
+        </ThemeProvider>
       )}
     </Box>
   )
