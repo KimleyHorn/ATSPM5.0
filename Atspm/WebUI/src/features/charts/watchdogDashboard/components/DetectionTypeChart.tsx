@@ -15,10 +15,10 @@ const DetectionTypeChart: React.FC<DetectionTypeChartProps> = ({
   const theme = useTheme()
   const detectionTypeChartOption = useMemo(() => {
     if (data) {
-      return transformDetectionTypeData(data)
+      return transformDetectionTypeData(data, theme.palette.mode === 'dark')
     }
     return null
-  }, [data])
+  }, [data, theme.palette.mode])
 
   return (
     <Paper elevation={3} sx={{ height: 600, padding: 1 }}>

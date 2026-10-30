@@ -10,8 +10,7 @@ const AverageDailyPedVolByLocationChart = ({
   printMode,
 }: PedatChartsContainerProps) => {
   const theme = useTheme()
-  // Report captures render on white, so keep them on the light chart theme
-  const chartTheme = printMode ? 'light' : theme.palette.mode
+  const chartTheme = theme.palette.mode
   const base = transformAvgDailyPedVolByLocation(data || [])
 
   const option = useMemo(

@@ -14,7 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 // #endregion
-import { EChartsOption } from 'echarts'
+import type { BarSeriesOption, EChartsOption } from 'echarts'
 
 interface HardwareData {
   name: string
@@ -27,11 +27,14 @@ interface DetectionTypeData {
   name: string
 }
 
-const transformDetectionTypeData = (data: DetectionTypeData[]): EChartsOption => {
+const transformDetectionTypeData = (
+  data: DetectionTypeData[],
+  darkMode = false
+): EChartsOption => {
   const xAxisData = data.map(item => `${item.name} (${item.detectionType})`)
   const legendData = Array.from(new Set(data.flatMap(item => item.hardware.map(hw => hw.name))))
 
-  const series = legendData.map(hardwareName => ({
+  const series: BarSeriesOption[] = legendData.map(hardwareName => ({
     name: hardwareName,
     type: 'bar',
 
@@ -44,7 +47,11 @@ const transformDetectionTypeData = (data: DetectionTypeData[]): EChartsOption =>
       rotate: 90,
       formatter: '{c}  {name|{a}}',
       fontSize: 8,
-      color: '#000000',
+      color: darkMode ? '#1a1a1a' : '#000000',
+      ...(darkMode && {
+        backgroundColor: 'rgba(255, 255, 255, 0.9)',
+        padding: 2,
+      }),
       rich: {
         name: {}
       }

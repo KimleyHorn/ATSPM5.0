@@ -15,8 +15,7 @@ const TotalPedVolByLocationCharts = ({
   printMode,
 }: PedatChartsContainerProps) => {
   const theme = useTheme()
-  // Report captures render on white, so keep them on the light chart theme
-  const chartTheme = printMode ? 'light' : theme.palette.mode
+  const chartTheme = theme.palette.mode
   const totalVolume = data
     ?.map((loc) => loc.totalVolume || 0)
     .reduce((a, b) => a + b, 0)

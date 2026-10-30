@@ -4,6 +4,7 @@ import {
   handleGreenTimeUtilizationDataZoom,
 } from '@/features/charts/utils'
 import { useChartsStore } from '@/stores/charts'
+import { useTheme } from '@mui/material'
 import type {
   DataZoomComponentOption,
   DatasetComponentOption,
@@ -63,6 +64,7 @@ export default function ApacheEChart({
   theme,
   hideInteractionMessage = false,
 }: ApacheEChartsProps) {
+  const muiTheme = useTheme()
   const chartRef = useRef<HTMLDivElement>(null)
   const { activeChart, setActiveChart, syncZoom, yAxisMaxStore } =
     useChartsStore()
@@ -211,7 +213,8 @@ export default function ApacheEChart({
       const imageURL = currentChart.getDataURL({
         type: 'png',
         pixelRatio: 2,
-        backgroundColor: '#fff',
+        backgroundColor:
+          theme === 'dark' ? muiTheme.palette.background.paper : '#fff',
       })
       const link = document.createElement('a')
       link.href = imageURL
@@ -233,7 +236,7 @@ export default function ApacheEChart({
     return () => {
       window.removeEventListener('saveChartImage', handleSaveAsImage)
     }
-  }, [])
+  }, [theme, muiTheme.palette.background.paper])
 
   const handleActivate = () => {
     if (!isActive) {
