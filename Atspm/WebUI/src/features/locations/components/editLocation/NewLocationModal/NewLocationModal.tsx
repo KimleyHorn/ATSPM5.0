@@ -24,11 +24,13 @@ import { isAxiosError } from 'axios'
 import { useState } from 'react'
 import { Controller, useForm } from 'react-hook-form'
 import { z } from 'zod'
+import CopyLocationDialog from '../CopyLocationDialog'
 
 interface NewLocationModalProps {
   closeModal: () => void
   setLocation: (location: Location) => void
   onCreatedFromTemplate: () => void
+  onCopied: (id: number) => void
 }
 
 // Schemas
@@ -79,8 +81,10 @@ const NewLocationModal = ({
   closeModal,
   setLocation,
   onCreatedFromTemplate,
+  onCopied,
 }: NewLocationModalProps) => {
   const [createError, setCreateError] = useState<string | null>(null)
+  const [copyExisting, setCopyExisting] = useState(false)
   // const [selectedLocation, setSelectedLocation] = useState<Location | null>(
   //   null
   // )
@@ -232,6 +236,26 @@ const NewLocationModal = ({
     return 'Location creation failed because the site is missing required configuration data, usually a valid Region or Jurisdiction.'
   }
 
+  if (copyExisting) {
+    return (
+      <CopyLocationDialog
+        locations={allLocations
+          .filter((loc) => loc.locationTypeId === 1)
+          .map((loc) => ({
+            id: Number(loc.id),
+            locationIdentifier: loc.locationIdentifier,
+            primaryName: loc.primaryName,
+            secondaryName: loc.secondaryName,
+          }))}
+        onCreated={(id) => {
+          onCopied(id)
+          closeModal()
+        }}
+        onClose={() => setCopyExisting(false)}
+      />
+    )
+  }
+
   return (
     <Dialog
       open={true}
@@ -249,6 +273,14 @@ const NewLocationModal = ({
       </DialogTitle>
       <form onSubmit={handleSubmit(onSubmit)}>
         <DialogContent>
+          <Button
+            variant="outlined"
+            fullWidth
+            sx={{ mb: 2 }}
+            onClick={() => setCopyExisting(true)}
+          >
+            Copy an Existing Intersection
+          </Button>
           {createError && (
             <Alert severity="error" variant="outlined" sx={{ mb: 2 }}>
               <AlertTitle>Location Could Not Be Created</AlertTitle>

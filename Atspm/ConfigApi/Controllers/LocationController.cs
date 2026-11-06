@@ -189,6 +189,27 @@ namespace Utah.Udot.Atspm.ConfigApi.Controllers
             }
         }
 
+        /// <summary>Copies a location and its configuration to a new signal identifier.</summary>
+        [Authorize(Policy = "CanEditLocationConfigurations")]
+        [HttpPost("/api/v1/Location/{key}/CopyLocation")]
+        [ProducesResponseType(Status200OK)]
+        public async Task<IActionResult> CopyLocation(int key, [FromBody] CopyLocationRequest request)
+        {
+            try
+            {
+                var copied = await _locationManager.CopyLocation(key, request);
+                return Ok(new { id = copied.Id });
+            }
+            catch (KeyNotFoundException e)
+            {
+                return NotFound(e.Message);
+            }
+            catch (ArgumentException e)
+            {
+                return BadRequest(e.Message);
+            }
+        }
+
         /// <summary>
         /// Marks <see cref="Location"/> to deleted
         /// </summary>
