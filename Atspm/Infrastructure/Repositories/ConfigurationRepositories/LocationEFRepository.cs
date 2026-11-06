@@ -142,7 +142,8 @@ namespace Utah.Udot.Atspm.Infrastructure.Repositories.ConfigurationRepositories
                 .FromSpecification(new ActiveLocationSpecification())
                 .FirstOrDefault();
 
-            _db.Entry(result).State = EntityState.Detached;
+            if (result != null)
+                _db.Entry(result).State = EntityState.Detached;
 
             return result;
         }

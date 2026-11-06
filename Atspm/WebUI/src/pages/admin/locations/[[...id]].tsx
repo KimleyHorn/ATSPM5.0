@@ -96,6 +96,7 @@ const LocationsAdmin = () => {
           closeModal={closeModal}
           setLocation={onSelectLocation}
           onCreatedFromTemplate={handleOpenWizard}
+          onCopied={(id) => onSelectLocation(id)}
         />
       )}
     </ResponsivePageLayout>
