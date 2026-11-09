@@ -29,15 +29,19 @@ namespace Utah.Udot.Atspm.EventLogUtility.Commands
         public DecodeEventsCommand() : base("decode-events", "Import and decode event logs from files")
         {
             AddGlobalOption(PathCommandOption);
+            AddOption(DeleteDecodedSourceOption);
         }
 
         public PathCommandOption PathCommandOption { get; set; } = new();
+
+        public DeleteDecodedSourceOption DeleteDecodedSourceOption { get; set; } = new();
 
         public ModelBinder<DecodeEventsConfiguration> GetOptionsBinder()
         {
             var binder = new ModelBinder<DecodeEventsConfiguration>();
 
             binder.BindMemberFromValue(b => b.Path, PathCommandOption);
+            binder.BindMemberFromValue(b => b.DeleteSource, DeleteDecodedSourceOption);
 
             return binder;
         }
@@ -47,6 +51,16 @@ namespace Utah.Udot.Atspm.EventLogUtility.Commands
             services.AddSingleton(GetOptionsBinder());
             services.AddOptions<DecodeEventsConfiguration>().BindCommandLine();
             services.AddHostedService<DecodeEventLogHostedService>();
+        }
+    }
+
+    /// <summary>
+    /// Deletes each source file after it has been successfully decoded and saved. Off by default.
+    /// </summary>
+    public class DeleteDecodedSourceOption : Option<bool>
+    {
+        public DeleteDecodedSourceOption() : base("--delete-source", () => false, "Delete each source file after it has been successfully decoded and saved")
+        {
         }
     }
 }
