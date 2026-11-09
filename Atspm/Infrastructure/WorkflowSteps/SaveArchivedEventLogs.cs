@@ -70,7 +70,18 @@ namespace Utah.Udot.ATSPM.Infrastructure.WorkflowSteps
                 }
 
                 if (result != null)
+                {
                     yield return result;
+                }
+                else
+                {
+                    // A null result is not proof that the event log was persisted. Treat it as a
+                    // failed save so callers that delete source files can retain the input.
+                    Interlocked.Increment(ref _failedCount);
+                    scope.ServiceProvider.GetService<ILogger<SaveArchivedEventLogs>>()?.LogWarning(
+                        "Save returned no result for {DataType} events at location {LocationIdentifier} on {ArchiveDate}",
+                        input.DataType?.Name, input.LocationIdentifier, input.ArchiveDate);
+                }
             }
         }
     }
