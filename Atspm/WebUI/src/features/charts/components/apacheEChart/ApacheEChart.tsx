@@ -1,4 +1,5 @@
 import { ChartType } from '@/features/charts/common/types'
+import { ChartDataDialog } from '@/features/charts/components/chartDataDialog'
 import {
   adjustPlanPositions,
   handleGreenTimeUtilizationDataZoom,
@@ -71,6 +72,9 @@ export default function ApacheEChart({
   const [isHovered, setIsHovered] = useState(false)
   const [isScrolling, setIsScrolling] = useState(false)
   const chartInstance = useRef<ECharts | null>(null)
+  const [dataViewOption, setDataViewOption] = useState<EChartsOption | null>(
+    null
+  )
 
   // ECharts' dark theme paints its own background; let the card show through
   const option = useMemo<EChartsOption>(
@@ -238,6 +242,23 @@ export default function ApacheEChart({
     }
   }, [theme, muiTheme.palette.background.paper])
 
+  useEffect(() => {
+    const handleOpenDataView = (event: Event) => {
+      const { chartDom } = (event as CustomEvent<{ chartDom: HTMLElement }>)
+        .detail
+      const currentChart = chartInstance.current
+      // The toolbox button sends its own chart's DOM node, so only the chart
+      // that was clicked opens the dialog.
+      if (!currentChart || chartDom !== currentChart.getDom()) return
+      setDataViewOption(currentChart.getOption() as EChartsOption)
+    }
+
+    window.addEventListener('openChartDataView', handleOpenDataView)
+    return () => {
+      window.removeEventListener('openChartDataView', handleOpenDataView)
+    }
+  }, [])
+
   const handleActivate = () => {
     if (!isActive) {
       setActiveChart(id)
@@ -261,6 +282,7 @@ export default function ApacheEChart({
   }
 
   return (
+    <>
     <div
       style={{
         position: 'relative',
@@ -323,5 +345,12 @@ export default function ApacheEChart({
         </>
       )}
     </div>
+    {/* Outside the chart div so dialog clicks don't bubble to handleActivate */}
+    <ChartDataDialog
+      open={dataViewOption !== null}
+      option={dataViewOption}
+      onClose={() => setDataViewOption(null)}
+    />
+    </>
   )
 }

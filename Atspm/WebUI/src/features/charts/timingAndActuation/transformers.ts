@@ -18,6 +18,7 @@ import {
   createDataZoom,
   createDisplayProps,
   createTitle,
+  dataViewToolboxFeature,
   createTooltip,
   createXAxis,
   createYAxis,
@@ -137,9 +138,7 @@ function transformData(data: RawTimingAndActuationData) {
           window.dispatchEvent(event)
         },
       },
-      dataView: {
-        readOnly: true,
-      },
+      myDataView: dataViewToolboxFeature,
     },
   }
 

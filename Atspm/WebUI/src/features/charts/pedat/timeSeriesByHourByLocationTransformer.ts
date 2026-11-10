@@ -19,6 +19,7 @@ import {
   createGrid,
   createLegend,
   createTooltip,
+  dataViewToolboxFeature,
 } from '@/features/charts/common/transformers'
 import type { EChartsOption, ToolboxComponentOption } from 'echarts'
 
@@ -110,9 +111,7 @@ export default function timeSeriesByHourByLocationTransformer(
       magicType: {
         type: ['stack', 'line', 'bar'],
       },
-      dataView: {
-        readOnly: true,
-      },
+      myDataView: dataViewToolboxFeature,
     },
   }
   const tooltip = createTooltip({ trigger: 'axis' })
