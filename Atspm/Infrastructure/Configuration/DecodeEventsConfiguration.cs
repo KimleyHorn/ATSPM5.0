@@ -23,5 +23,12 @@ namespace Utah.Udot.Atspm.Infrastructure.Configuration
         /// Path to local directory where event logs are saved
         /// </summary>
         public string Path { get; set; } = System.IO.Path.GetTempPath();
+
+        /// <summary>
+        /// When <see langword="true"/>, each source file is deleted after it has been
+        /// successfully decoded and saved. Defaults to <see langword="false"/> so files are kept
+        /// unless this is explicitly turned on.
+        /// </summary>
+        public bool DeleteSource { get; set; } = false;
     }
 }

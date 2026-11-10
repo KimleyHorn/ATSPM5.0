@@ -40,9 +40,13 @@ namespace Utah.Udot.Atspm.Infrastructure.Services.HostedServices
 
             var dir = new DirectoryInfo(_options.Value.Path);
 
+            // Files that were queued for decoding, and issues found during the run (logged as a summary at the end)
+            var queuedFiles = new List<FileInfo>();
+            var issues = new List<(string Folder, string Issue)>();
+
             if (dir.Exists)
             {
-                var files = dir.GetFiles("", SearchOption.AllDirectories);
+                var files = dir.GetFiles("*", SearchOption.AllDirectories);
 
                 Console.WriteLine($"file count {files.Length}");
 
@@ -50,24 +54,38 @@ namespace Utah.Udot.Atspm.Infrastructure.Services.HostedServices
 
                 foreach (var g in groups)
                 {
-                    if (g.Key.Contains('-'))
+                    // Supported folder layouts:
+                    //   MainFolder\{SignalId}\*.dat   - folder named only with the signal id (only .dat/.datZ files are read)
+                    //   MainFolder\{SignalId}-{Ip}\*  - original layout, every file is read
+                    var device = repo.GetList().FirstOrDefault(f => f.DeviceIdentifier == g.Key);
+                    var isSignalIdFolder = device != null;
+                    IEnumerable<FileInfo> folderFiles = g;
+
+                    if (device == null && g.Key.Contains('-'))
                     {
-                        var tag = new[] { g.Key }.Select(s => s.Split('-')).Select(parts => new
-                        {
-                            Id = parts[0],
-                            Ip = parts[1]
-                        })
-                            .FirstOrDefault();
+                        var id = g.Key.Split('-')[0];
+                        device = repo.GetList().FirstOrDefault(f => f.DeviceIdentifier == id);
+                    }
 
-                        var device = repo.GetList().FirstOrDefault(f => f.DeviceIdentifier == tag.Id);
+                    if (device == null)
+                    {
+                        // Folders with no matching device are skipped, except the root folder itself
+                        if (!string.Equals(g.Key, dir.Name, StringComparison.OrdinalIgnoreCase))
+                            issues.Add((g.Key, "No matching device found for folder name"));
+                        continue;
+                    }
 
-                        if (device != null)
-                        {
-                            foreach (var f in g)
-                            {
-                                await workflow.Input.SendAsync(Tuple.Create(device, f));
-                            }
-                        }
+                    if (isSignalIdFolder)
+                    {
+                        folderFiles = g.Where(f =>
+                            f.Extension.Equals(".dat", StringComparison.OrdinalIgnoreCase) ||
+                            f.Extension.Equals(".datz", StringComparison.OrdinalIgnoreCase));
+                    }
+
+                    foreach (var f in folderFiles)
+                    {
+                        queuedFiles.Add(f);
+                        await workflow.Input.SendAsync(Tuple.Create(device, f));
                     }
                 }
             }
@@ -79,6 +97,43 @@ namespace Utah.Udot.Atspm.Infrastructure.Services.HostedServices
             workflow.Input.Complete();
 
             await Task.WhenAll(workflow.Steps.Select(s => s.Completion));
+
+            // Files that could not be decoded are skipped and kept
+            var failedFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (var failure in workflow.DecodeDeviceData.Failures)
+            {
+                failedFiles.Add(failure.Item2.FullName);
+                issues.Add((failure.Item1.DeviceIdentifier, $"{failure.Item2.Name}: {failure.Item3}"));
+            }
+
+            var failedSaves = workflow.SaveEventsToRepo.FailedCount;
+
+            if (failedSaves > 0)
+            {
+                log.LogWarning("{FailedCount} save(s) failed. Keeping all source files so they are retried next run", failedSaves);
+                issues.Add(("All files", $"{failedSaves} save(s) failed. Files kept to retry next run"));
+            }
+            else if (_options.Value.DeleteSource)
+            {
+                // Delete only after everything saved successfully, and never delete files that failed to decode
+                foreach (var file in queuedFiles.Where(f => !failedFiles.Contains(f.FullName)))
+                {
+                    try { file.Delete(); }
+                    catch (Exception ex)
+                    {
+                        log.LogWarning(ex, "Could not delete file {FileName}", file.FullName);
+                        issues.Add((file.Directory?.Name ?? "Unknown", $"{file.Name}: could not delete file ({ex.Message})"));
+                    }
+                }
+            }
+
+            log.LogInformation("Decode events finished. Queued {QueuedCount} file(s), {IssueCount} issue(s)", queuedFiles.Count, issues.Count);
+
+            foreach (var (folder, issue) in issues.OrderBy(i => i.Folder))
+            {
+                log.LogWarning("Decode events issue - {Folder} | {Issue}", folder, issue);
+            }
         }
     }
 }
