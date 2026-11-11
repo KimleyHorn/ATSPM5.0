@@ -16,7 +16,16 @@
 // #endregion
 import { create } from 'zustand'
 
+/** Location and time range of the charts currently on screen. */
+export interface ChartRequest {
+  locationIdentifier: string
+  start: Date
+  end: Date
+}
+
 interface ChartsStore {
+  chartRequest: ChartRequest | null
+  setChartRequest: (chartRequest: ChartRequest | null) => void
   activeChart: number | string | null
   setActiveChart: (activeChart: number | string | null) => void
   yAxisMaxStore: string | null
@@ -26,6 +35,9 @@ interface ChartsStore {
 }
 
 export const useChartsStore = create<ChartsStore>((set) => ({
+  chartRequest: null,
+  setChartRequest: (chartRequest: ChartRequest | null) => set({ chartRequest }),
+
   activeChart: null,
   setActiveChart: (activeChart: number | string | null) => set({ activeChart }),
 

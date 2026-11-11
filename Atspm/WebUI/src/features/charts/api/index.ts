@@ -16,5 +16,6 @@
 // #endregion
 export * from './getChartDefaults'
 export * from './getCharts'
+export * from './getRawEvents'
 export * from './transformData'
 export * from './updateChartDefaults'

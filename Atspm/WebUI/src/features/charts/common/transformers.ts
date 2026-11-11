@@ -363,6 +363,24 @@ export function formatExportFileName(
   )
 }
 
+/**
+ * Replaces ECharts' built-in `dataView`. Clicking it asks the clicked chart
+ * (ApacheEChart) to open the tabbed data dialog.
+ */
+export const dataViewToolboxFeature = {
+  show: true,
+  title: 'Data View',
+  icon: 'M11.5,2v56H51V14.8L38.4,2H11.5z M38.2,2.1v12.7H51 M17.5,29.5h28 M17.5,35.4h28 M17.5,41.4h28',
+  // ECharts passes (ecModel, api); api.getDom() is the chart's container.
+  onclick: (_ecModel: unknown, api: { getDom: () => HTMLElement }) => {
+    window.dispatchEvent(
+      new CustomEvent('openChartDataView', {
+        detail: { chartDom: api.getDom() },
+      })
+    )
+  },
+}
+
 export function createToolbox(
   { title, dateRange }: titleProps,
   locationIdentifier: string,
@@ -371,9 +389,7 @@ export function createToolbox(
   const toolbox: ToolboxComponentOption = {
     feature: {
       saveAsImage: { name: title },
-      dataView: {
-        readOnly: true,
-      },
+      myDataView: dataViewToolboxFeature,
     },
   }
   return toolbox

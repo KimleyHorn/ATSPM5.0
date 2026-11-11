@@ -9,6 +9,7 @@ import TimingAndActuationChartsToolbox from '@/features/charts/timingAndActuatio
 import TurningMovementCountsTable from '@/features/charts/turningMovementCounts/components/TurningMovementCountsTable'
 import { TransformedApproachVolumeResponse } from '@/features/charts/types'
 import LocationsConfigContainer from '@/features/locations/components/locationConfigContainer'
+import { useChartsStore } from '@/stores/charts'
 import PlayArrowIcon from '@mui/icons-material/PlayArrow'
 import { LoadingButton } from '@mui/lab'
 import { Alert, Box } from '@mui/material'
@@ -37,6 +38,7 @@ export default function ChartsContainer({
   const [areRefsReady, setAreRefsReady] = useState(false)
   const [alert, setAlert] = useState('')
   const chartRefs = useRef<RefObject<HTMLDivElement>[]>([])
+  const setChartRequest = useChartsStore((state) => state.setChartRequest)
 
   let useChartsController = false
 
@@ -85,6 +87,21 @@ export default function ChartsContainer({
       ? window.scrollTo({ top: scrollPositionForConfig })
       : window.scrollTo({ top: scrollPositionForCharts })
   }, [showConfig, scrollPositionForCharts, scrollPositionForConfig])
+
+  // Remember what these charts were generated for so the chart data dialog's
+  // Raw Data tab can request the matching event log records.
+  useEffect(() => {
+    if (!chartData) return
+    setChartRequest({
+      locationIdentifier: location,
+      start: startDateTime,
+      end: endDateTime,
+    })
+    // Only when new chart data arrives, not on every form edit
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chartData])
+
+  useEffect(() => () => setChartRequest(null), [setChartRequest])
 
   useEffect(() => {
     setAreRefsReady(false)
